@@ -1,0 +1,724 @@
+<title>캐싱 버그 조사 기록</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --ink:#1a1f2b;
+  --ink-soft:#565f70;
+  --paper:#eef0f3;
+  --surface:#ffffff;
+  --surface-2:#e4e7ec;
+  --line:#d6dae1;
+  --line-strong:#bcc2cc;
+  --accent:#4550c4;
+  --accent-bg:#e7e8fb;
+  --ok:#1c8f5e;
+  --ok-bg:#e0f4ea;
+  --warn:#b33c1e;
+  --warn-bg:#fbe9e3;
+  --shadow:0 1px 2px rgba(20,24,36,.05), 0 8px 24px -12px rgba(20,24,36,.18);
+  --radius:9px;
+  --serif:'Noto Serif KR',ui-serif,serif;
+  --sans:'Noto Sans KR','Noto Sans',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e6e8ee; --ink-soft:#a3aabb;
+    --paper:#12151c; --surface:#191d26; --surface-2:#20242e;
+    --line:#2b3140; --line-strong:#3a4152;
+    --accent:#93a1ff; --accent-bg:#242a52;
+    --ok:#57d19a; --ok-bg:#123527;
+    --warn:#f0805e; --warn-bg:#3a1f16;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e6e8ee; --ink-soft:#a3aabb;
+  --paper:#12151c; --surface:#191d26; --surface-2:#20242e;
+  --line:#2b3140; --line-strong:#3a4152;
+  --accent:#93a1ff; --accent-bg:#242a52;
+  --ok:#57d19a; --ok-bg:#123527;
+  --warn:#f0805e; --warn-bg:#3a1f16;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -12px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box;}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.7;padding:0 18px;}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:700;color:var(--ink);text-wrap:balance;margin:0;}
+p{margin:0 0 12px;}
+p:last-child{margin-bottom:0;}
+a{color:var(--accent);}
+code{font-family:var(--mono);}
+::selection{background:var(--accent-bg);color:var(--accent);}
+
+.wrap{max-width:940px;margin:0 auto;padding-block:26px 70px;}
+
+/* ---- case header ---- */
+.case-header{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:22px 26px;margin-bottom:18px;
+}
+.case-header .kicker{
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);display:flex;align-items:center;gap:8px;margin-bottom:10px;
+}
+.case-header .kicker .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);}
+.case-header h1{font-size:26px;line-height:1.3;margin-bottom:8px;}
+.case-header .sub{color:var(--ink-soft);font-size:14px;max-width:60ch;margin-bottom:16px;}
+.case-meta{display:flex;flex-wrap:wrap;gap:22px;border-top:1px solid var(--line);padding-top:14px;}
+.case-meta div{font-size:12.5px;}
+.case-meta dt{font-family:var(--mono);color:var(--ink-soft);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
+.case-meta dd{margin:0;font-weight:600;}
+
+/* ---- tabs ---- */
+nav.tabs{
+  display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;margin-bottom:20px;
+  -webkit-overflow-scrolling:touch;border-bottom:1px solid var(--line-strong);
+}
+nav.tabs button{
+  all:unset;flex:none;cursor:pointer;
+  font-family:var(--sans);font-size:13px;font-weight:500;color:var(--ink-soft);
+  padding:10px 14px;border-bottom:2px solid transparent;white-space:nowrap;
+  display:flex;align-items:baseline;gap:6px;
+}
+nav.tabs button .n{font-family:var(--serif);font-size:12px;color:var(--ink-soft);}
+nav.tabs button:hover{color:var(--ink);}
+nav.tabs button[aria-selected="true"]{color:var(--ink);font-weight:700;border-bottom-color:var(--accent);}
+nav.tabs button[aria-selected="true"] .n{color:var(--accent);}
+
+/* ---- panels & entries ---- */
+.panel{display:none;}
+.panel[data-active="true"]{display:block;animation:fade .22s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.panel-head{margin-bottom:18px;}
+.panel-head h2{font-size:23px;margin-bottom:6px;}
+.panel-head .desc{color:var(--ink-soft);font-size:13.5px;max-width:64ch;}
+
+.entry{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:19px 22px;margin-bottom:14px;
+}
+.entry > h3{font-size:15px;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.entry > .entry-label{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:block;}
+.entry > h3 + .entry-label{margin-top:-2px;}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media (max-width:720px){.grid-2{grid-template-columns:1fr;}}
+
+table{width:100%;border-collapse:collapse;font-size:13.2px;}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;}
+tr:last-child td{border-bottom:none;}
+.tbl-wrap{overflow-x:auto;margin:8px 0;}
+
+pre{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:13px 15px;overflow-x:auto;font-size:12px;line-height:1.6;margin:10px 0;}
+pre code{font-family:var(--mono);color:var(--ink);}
+.add{color:var(--ok);}
+.del{color:var(--warn);text-decoration:line-through;text-decoration-color:var(--warn);}
+
+.tag{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap;}
+.tag.ok{background:var(--ok-bg);color:var(--ok);}
+.tag.warn{background:var(--warn-bg);color:var(--warn);}
+.tag.neutral{background:var(--surface-2);color:var(--ink-soft);}
+
+.callout{border-left:3px solid var(--accent);background:var(--accent-bg);padding:11px 15px;border-radius:0 8px 8px 0;font-size:13px;margin:12px 0;}
+.callout.warn{border-color:var(--warn);background:var(--warn-bg);color:var(--warn);}
+.callout.ok{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);}
+
+ol.steps{margin:8px 0 0;padding:0;list-style:none;counter-reset:s;}
+ol.steps li{counter-increment:s;position:relative;padding-left:28px;margin-bottom:9px;font-size:13.2px;}
+ol.steps li::before{content:counter(s);position:absolute;left:0;top:.5px;width:19px;height:19px;border-radius:50%;background:var(--surface-2);color:var(--ink-soft);font-family:var(--mono);font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:center;}
+ul.plain{margin:8px 0 0;padding:0;list-style:none;}
+ul.plain li{position:relative;padding-left:15px;margin-bottom:6px;font-size:13.2px;}
+ul.plain li::before{content:"–";position:absolute;left:0;color:var(--ink-soft);}
+
+dl.qa{margin:0;}
+dl.qa dt{font-family:var(--serif);font-weight:600;font-size:14px;margin:16px 0 6px;}
+dl.qa dt:first-child{margin-top:0;}
+dl.qa dd{margin:0 0 4px;font-size:13.3px;color:var(--ink);}
+dl.qa dd ul{margin:4px 0 0;padding-left:16px;}
+
+figure{margin:14px 0 4px;}
+figure svg{width:100%;height:auto;display:block;background:var(--surface);border:1px solid var(--line);border-radius:8px;}
+figcaption{font-size:12px;color:var(--ink-soft);margin-top:7px;text-align:center;}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13.2px;}
+.kv dt{color:var(--ink-soft);font-family:var(--mono);font-size:11px;padding-top:2px;}
+.kv dd{margin:0;}
+
+@media (max-width:600px){
+  .case-meta{gap:14px;}
+}
+</style>
+
+<div class="wrap">
+  <header class="case-header">
+    <div class="kicker"><span class="dot"></span>원인 확인 · 실 BTP 환경 재현·검증 완료</div>
+    <h1>캐싱 버그 조사 기록</h1>
+    <p class="sub">SK ON e-HR(<code>welfare</code>) 화이트스크린 현상 — 가설 수립부터 실제 배포 환경 대조 실험까지의 전체 조사 과정</p>
+    <dl class="case-meta">
+      <div><dt>대상</dt><dd>welfare (e-HR)</dd></div>
+      <div><dt>재현 환경</dt><dd>BTP KR_pockr / dev</dd></div>
+      <div><dt>재현 라운드</dt><dd>3회 (toy → BTP → hash routing)</dd></div>
+      <div><dt>근본 원인</dt><dd>xs-app.json catch-all</dd></div>
+    </dl>
+  </header>
+
+  <nav class="tabs" id="tabnav" role="tablist" aria-label="조사 기록 목차"></nav>
+  <main id="content"></main>
+</div>
+
+<script>
+const TABS = [
+  {id:"overview", label:"개요 · 가설 수립"},
+  {id:"toy", label:"1차 · 로컬 재현"},
+  {id:"btp", label:"2차 · 실 BTP 재현"},
+  {id:"conclusion", label:"결론"},
+  {id:"qa", label:"캐시 개념 Q&A"},
+  {id:"walkthrough", label:"슬로우 워크스루"},
+  {id:"welfare", label:"3차 · welfare 실증"},
+  {id:"perf", label:"성능 · 대안 비교"},
+  {id:"todo", label:"남은 과제"},
+  {id:"guide", label:"재현 가이드"},
+];
+const nav = document.getElementById("tabnav");
+TABS.forEach((t,i)=>{
+  const b = document.createElement("button");
+  b.setAttribute("role","tab");
+  b.dataset.tab = t.id;
+  b.innerHTML = `<span class="n">${String(i+1).padStart(2,"0")}</span><span>${t.label}</span>`;
+  b.addEventListener("click", ()=>select(t.id));
+  nav.appendChild(b);
+});
+function select(id){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===id));
+  document.querySelectorAll(".panel").forEach(p=>p.dataset.active = (p.id==="panel-"+id));
+  try{ localStorage.setItem("ehr-log-tab", id); }catch(e){}
+  window.scrollTo({top:0, behavior:"instant"});
+}
+let initial = "overview";
+try{ initial = localStorage.getItem("ehr-log-tab") || "overview"; }catch(e){}
+if(!TABS.find(t=>t.id===initial)) initial = "overview";
+</script>
+
+<div id="panels"></div>
+
+<!-- ============ 1. 개요 ============ -->
+<template id="tmpl-overview">
+<div class="panel" id="panel-overview">
+  <div class="panel-head"><h2>배경과 가설 수립</h2>
+    <p class="desc">SK ON e-HR 시스템의 간헐적 흰 화면 현상 — 조사의 출발점과 초기 가설 4가지.</p>
+  </div>
+
+  <div class="entry">
+    <h3>배경</h3>
+    <p>"메뉴 클릭 후 흰 화면, 일정 시간 후 또는 브라우저 캐시 전체 삭제 후 정상화"되는 현상이 불특정 사용자에게 간헐적으로 발생. 1년 전 유사 이슈(브라우저 재시작 후 인증 실패)는 <code>xs-app.json</code>의 welcome file(<code>index.html</code>)에 <code>cacheControl</code> 설정을 추가해 해결한 전례가 있음.</p>
+  </div>
+
+  <div class="entry">
+    <h3>조사 여정</h3>
+    <figure>
+      <svg viewBox="0 0 900 190" role="img" aria-label="조사 과정 타임라인: 배경 파악, 가설 4개 수립, SAP 공식자료 조사, 로컬 재현, 실 BTP 재현, 실제 설정 확인, 해시 라우팅 정밀 재현, 결론 순으로 진행됨">
+        <line x1="40" y1="95" x2="860" y2="95" stroke="currentColor" stroke-width="1.2" opacity=".35"/>
+        <!-- nodes -->
+        <g font-family="Noto Sans KR, sans-serif" font-size="11">
+          <!-- 1 -->
+          <circle cx="70" cy="95" r="5" fill="var(--ink-soft)"/>
+          <text x="70" y="75" text-anchor="middle" fill="currentColor">배경 파악</text>
+          <text x="70" y="118" text-anchor="middle" fill="var(--ink-soft)" font-size="10">간헐적 흰 화면</text>
+          <!-- 2 -->
+          <circle cx="200" cy="95" r="5" fill="var(--ink-soft)"/>
+          <text x="200" y="75" text-anchor="middle" fill="currentColor">가설 4개</text>
+          <text x="200" y="118" text-anchor="middle" fill="var(--ink-soft)" font-size="10">타임아웃 · 캐시 · 등</text>
+          <!-- 3 -->
+          <circle cx="330" cy="95" r="5" fill="var(--ink-soft)"/>
+          <text x="330" y="75" text-anchor="middle" fill="currentColor">SAP 자료 조사</text>
+          <text x="330" y="118" text-anchor="middle" fill="var(--ink-soft)" font-size="10">Help · KBA</text>
+          <!-- 4 -->
+          <circle cx="460" cy="95" r="6.5" fill="var(--accent)"/>
+          <text x="460" y="75" text-anchor="middle" fill="var(--accent)" font-weight="700">1차 로컬 재현</text>
+          <text x="460" y="118" text-anchor="middle" fill="var(--ink-soft)" font-size="10">toy 서버</text>
+          <!-- 5 -->
+          <circle cx="590" cy="95" r="7.5" fill="var(--accent)"/>
+          <text x="590" y="75" text-anchor="middle" fill="var(--accent)" font-weight="700">2차 실 BTP 재현</text>
+          <text x="590" y="118" text-anchor="middle" fill="var(--ink-soft)" font-size="10">A/B 대조 실험</text>
+          <!-- 6 -->
+          <circle cx="720" cy="95" r="6.5" fill="var(--accent)"/>
+          <text x="720" y="75" text-anchor="middle" fill="var(--accent)" font-weight="700">실제 설정 확인</text>
+          <text x="720" y="118" text-anchor="middle" fill="var(--ink-soft)" font-size="10">welfare xs-app.json</text>
+          <!-- 7 -->
+          <circle cx="850" cy="95" r="7.5" fill="var(--ok)"/>
+          <text x="850" y="75" text-anchor="middle" fill="var(--ok)" font-weight="700">3차 정밀 재현</text>
+          <text x="850" y="118" text-anchor="middle" fill="var(--ink-soft)" font-size="10">해시 라우팅</text>
+        </g>
+        <text x="450" y="160" text-anchor="middle" font-family="Noto Sans KR, sans-serif" font-size="11.5" fill="var(--ink-soft)">굵은 원 = 실제 배포/재현 실행 지점</text>
+      </svg>
+      <figcaption>4개 가설에서 출발해 세 차례의 실증(로컬 → 실 BTP → 실제 소스 기반 정밀 재현)으로 신뢰도를 높여간 조사 흐름.</figcaption>
+    </figure>
+  </div>
+
+  <div class="entry">
+    <h3>초기 가설 4가지</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>가설</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>세션/토큰 타임아웃 계층 불일치 <span class="mono" style="font-family:var(--mono);font-size:11px;color:var(--ink-soft)">(AppRouter 30m / XSUAA 1h / IAS 12h)</span></td><td><span class="tag neutral">범위 밖</span></td></tr>
+        <tr><td>2</td><td><b>HTML5 앱 정적 리소스의 xs-app.json 캐시 정책 커버리지 불균일</b></td><td><span class="tag ok">1순위 — 확정</span></td></tr>
+        <tr><td>3</td><td>Work Zone 사이트 타일의 sap-ui-version 고정 (KBA 3703606)</td><td><span class="tag neutral">미착수</span></td></tr>
+        <tr><td>4</td><td>Destination(OAuth2UserTokenExchange) 토큰 캐시 TTL 불일치</td><td><span class="tag neutral">미착수</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="entry">
+      <span class="entry-label">SAP 공식 자료 조사</span>
+      <ul class="plain">
+        <li>SAPUI5 앱 리소스는 기본 최대 1년 브라우저 캐시됨</li>
+        <li>Cache Buster는 ABAP NetWeaver 전용 (BTP CF 미적용)</li>
+        <li>KBA 3703606 — Work Zone 타일 버전 고정 시 blank screen</li>
+        <li>KBA 3554398 — CSP 차단, 캐시 삭제로 미해결되는 별개 케이스</li>
+        <li>Edge Tracking Prevention이 *.hana.ondemand.com 차단 가능</li>
+      </ul>
+    </div>
+    <div class="entry">
+      <span class="entry-label">고객 콘솔 로그 분리 분석</span>
+      <p><code>www.nets-jsso.com</code>(SK 그룹 사내 SSO)에서 <code>DNS_PROBE_FINISHED_NXDOMAIN</code> 확인 → 캐싱과는 별개의 사내 SSO/DNS 인프라 이슈로 판단, SAP 범위 밖으로 분리.</p>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- ============ 2. 로컬 재현 ============ -->
+<template id="tmpl-toy">
+<div class="panel" id="panel-toy">
+  <div class="panel-head"><h2>1차 · 로컬 Toy Demo 재현</h2>
+    <p class="desc">가설을 축소 모형으로 빠르게 검증한 첫 단계.</p>
+  </div>
+  <div class="entry">
+    <h3>구성</h3>
+    <p>Node.js 정적 서버로 welcome file(항상 fresh) + 메뉴 리소스(캐시 정책 유무를 전환 가능하게 구성)를 흉내낸 축소 모형 제작 (<code>repro/</code> 폴더).</p>
+  </div>
+  <div class="grid-2">
+    <div class="entry">
+      <span class="entry-label">캐시 정책 없음</span>
+      <p>배포 후 흰 화면 재현 성공 — 구버전 JS가 신버전 셸 데이터 형상을 못 읽어 <code>TypeError</code> 발생.</p>
+    </div>
+    <div class="entry">
+      <span class="entry-label"><code>cacheControl</code> 적용</span>
+      <p>흰 화면 재발 없음, 정상 반영 확인.</p>
+    </div>
+  </div>
+  <div class="entry">
+    <div class="callout warn"><b>부수적 발견</b> — 이미 캐시가 오염된 사용자는 서버 설정만 바꿔도 소급 적용되지 않음. 헤더 정책 변경은 향후 요청에만 영향을 주고, 과거 캐시 엔트리는 그대로 유지됨.</div>
+  </div>
+</div>
+</template>
+
+<!-- ============ 3. 실 BTP 재현 ============ -->
+<template id="tmpl-btp">
+<div class="panel" id="panel-btp">
+  <div class="panel-head"><h2>2차 · 실 BTP CF 환경 재현</h2>
+    <p class="desc">SK ON과 동일한 아키텍처(CAP+Fiori+AppRouter+XSUAA+html5-apps-repo, <code>demo01</code>)를 실제 BTP dev subaccount(org <code>BTP KR_pockr</code> / space <code>dev</code>)에 배포하여 재현. 본 조사의 핵심 라운드.</p>
+  </div>
+
+  <div class="entry">
+    <h3>배포 과정에서 만난 이슈 (캐싱과 무관, 별도 처리)</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>이슈</th><th>원인</th><th>해결</th></tr></thead>
+      <tbody>
+        <tr><td><code>jwincidentapp02-db-deployer</code> 빌드 실패</td><td><code>engines.node: "^18||^20"</code>, buildpack엔 Node 22/24만 존재</td><td>mtar 내부 package.json 직접 패치</td></tr>
+        <tr><td>approuter 빌드 실패</td><td><code>@sap/approuter</code> 14.4.2 구버전 고정</td><td>최신(<code>^23</code>)으로 업그레이드</td></tr>
+        <tr><td>db-deployer HDI 배포 TLS 에러</td><td>Node 22/24 인증서 검증과 HANA Cloud 체인 불일치 추정</td><td>스키마 변경 없어 배포서 제외</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="entry">
+    <h3>구조 — 근본원인의 코드 레벨 근거</h3>
+    <figure>
+      <svg viewBox="0 0 760 260" role="img" aria-label="브라우저가 AppRouter를 거쳐 두 종류의 라우트로 요청을 보낸다. welcome file 라우트는 캐시 정책이 있어 매번 서버로 가지만, catch-all 라우트는 캐시 정책이 없어 브라우저 디스크 캐시에서 응답이 종결된다.">
+        <defs><marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+        <rect x="16" y="95" width="124" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="78" y="120" text-anchor="middle" font-family="Noto Sans KR, sans-serif" font-size="12.5" fill="currentColor" font-weight="600">브라우저</text>
+        <text x="78" y="136" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" fill="currentColor" opacity=".6">frontendui02/…</text>
+        <line x1="140" y1="124" x2="200" y2="124" stroke="currentColor" stroke-width="1.3" marker-end="url(#arw)"/>
+        <rect x="205" y="48" width="215" height="165" rx="7" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="312" y="68" text-anchor="middle" font-family="Noto Sans KR, sans-serif" font-size="12.5" fill="currentColor" font-weight="600">AppRouter — xs-app.json</text>
+        <rect x="220" y="82" width="185" height="44" rx="6" fill="var(--ok-bg)" stroke="var(--ok)" stroke-width="1.1"/>
+        <text x="312" y="99" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" fill="var(--ok)">^/index.html</text>
+        <text x="312" y="114" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="var(--ok)">cacheControl: no-store ✓</text>
+        <rect x="220" y="134" width="185" height="44" rx="6" fill="var(--warn-bg)" stroke="var(--warn)" stroke-width="1.1"/>
+        <text x="312" y="151" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" fill="var(--warn)">^(.*)$ catch-all</text>
+        <text x="312" y="166" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="var(--warn)">cacheControl: 없음 ⚠</text>
+        <text x="312" y="200" text-anchor="middle" font-family="Noto Sans KR, sans-serif" font-size="9.5" fill="currentColor" opacity=".55">Component-preload.js · manifest.json</text>
+        <line x1="420" y1="104" x2="480" y2="104" stroke="var(--ok)" stroke-width="1.3" marker-end="url(#arw)"/>
+        <line x1="420" y1="156" x2="480" y2="156" stroke="var(--warn)" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arw)"/>
+        <rect x="485" y="78" width="255" height="110" rx="7" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="612" y="100" text-anchor="middle" font-family="Noto Sans KR, sans-serif" font-size="12.5" fill="currentColor" font-weight="600">html5-apps-repo-rt</text>
+        <text x="612" y="118" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" fill="currentColor" opacity=".6">항상 최신 파일 보유</text>
+        <line x1="505" y1="128" x2="720" y2="128" stroke="currentColor" stroke-width="1" opacity=".25"/>
+        <text x="612" y="150" text-anchor="middle" font-family="Noto Sans KR, sans-serif" font-size="10.5" fill="var(--warn)">catch-all 요청은 브라우저</text>
+        <text x="612" y="166" text-anchor="middle" font-family="Noto Sans KR, sans-serif" font-size="10.5" fill="var(--warn)">디스크 캐시에서 끝남</text>
+      </svg>
+      <figcaption>welcome file은 항상 서버 재확인, catch-all(앱 리소스 대부분)은 정책이 없어 브라우저 캐시에서 응답이 종결된다.</figcaption>
+    </figure>
+    <p>추가로 <code>ui5-deploy.yaml</code>이 <code>generateCachebusterInfo</code> 태스크를 실행해 캐시버스터 메타데이터를 생성하지만, 부트스트랩에 이를 활성화하는 <code>data-sap-ui-app-cache-buster</code> 속성이 없어 <b>생성된 메타데이터가 런타임에서 전혀 사용되지 않음</b>을 확인.</p>
+  </div>
+
+  <div class="entry">
+    <h3>텍스트 기반 1차 검증 (i18n.properties)</h3>
+    <p><code>appTitle</code>을 실제로 변경 → 재빌드 → <code>cf deploy</code> → 새로고침/하드리프레시에도 반영 안 됨 → Network 탭에서 <code>Component-preload.js</code>가 <code>(disk cache)</code>로 응답되는 것을 직접 확인. <code>fetch(url,{cache:'no-store'})</code>로 서버는 이미 최신 콘텐츠를 갖고 있음을 별도 확인 → 순수 브라우저 캐시 문제로 확정.</p>
+  </div>
+
+  <div class="entry">
+    <h3>자유형(Freestyle) 크래시 테스트 페이지</h3>
+    <p>Fiori Elements는 OData 메타데이터 기반 동적 렌더링 + 방어적 설계라 단순 텍스트 변경으로는 완전한 흰 화면까지 재현이 어려움 (일부 위젯만 부분 파손 — <code>incidentsID</code> 스키마 미존재 필드 참조 기존 버그를 별도 확인, 캐싱과 무관).</p>
+    <p>사용자 제안에 따라 <code>webapp/crashtest.html</code> + <code>crashtest.js</code> 신규 추가 — v1은 <code>ctx.empNo</code>, v2("배포 후")는 셸·JS 동시에 <code>ctx.employeeNumber</code>로 변경해 구버전 JS가 캐시에 남고 셸만 새로 받는 상황 재현.</p>
+  </div>
+
+  <div class="entry">
+    <h3>재현 중 시행착오 — 부수적 발견</h3>
+    <ol class="steps">
+      <li><b>cacheControl 완전 미지정 시 재현이 불안정함</b> — 브라우저 휴리스틱 캐싱(Last-Modified 기반)은 경과 시간에 따라 들쭉날쭉해서 짧은 테스트 주기 안엔 캐시가 안 걸리기도 함. <code>max-age=31536000</code>을 명시해 결정론적으로 재현하도록 변경.</li>
+      <li><b><code>&lt;script src&gt;</code> 태그 로딩이 <code>fetch()</code>와 다르게 캐시 재검증을 안 타는 현상 관찰</b> — <code>fetch()</code>+<code>eval()</code> 방식으로 전환.</li>
+      <li><b>시크릿 창을 "새로" 열어도 기존 시크릿 창이 하나라도 남아있으면 캐시를 공유함</b> — 완전히 새로 테스트하려면 시크릿 창 전부 종료 또는 "인터넷 사용 기록 삭제" 필요.</li>
+    </ol>
+  </div>
+
+  <div class="entry">
+    <h3>최종 검증 결과</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>시나리오</th><th>절차</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="tag warn">취약</span><br><code style="font-size:11px">max-age=31536000</code></td>
+          <td>v1 로드(캐시 워밍) → v2 배포 → 동일 창 새로고침</td>
+          <td><b>흰 화면</b> + <code>TypeError: Cannot read properties of undefined (reading 'toUpperCase')</code></td>
+        </tr>
+        <tr>
+          <td><span class="tag ok">수정</span><br><code style="font-size:11px">no-store, no-cache, must-revalidate</code></td>
+          <td>캐시 완전 삭제 → v1 로드 → v2 배포 → 캐시 안 지우고 새로고침만</td>
+          <td><b>정상 v2 반영, 크래시 없음</b></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- ============ 4. 결론 ============ -->
+<template id="tmpl-conclusion">
+<div class="panel" id="panel-conclusion">
+  <div class="panel-head"><h2>최종 결론</h2></div>
+  <div class="entry">
+    <h3>근본 원인</h3>
+    <p><code>xs-app.json</code>의 catch-all 라우트(앱 대부분의 정적 리소스가 매칭됨)에 <code>cacheControl</code> 미설정 → 브라우저 기본/휴리스틱 장기 캐싱 → 배포 후 셸(항상 최신)과 캐시된 리소스(구버전)의 형상 불일치 → JS 런타임 에러 → 렌더링 중단(흰 화면).</p>
+  </div>
+  <div class="entry">
+    <h3>수정</h3>
+    <pre><code>catch-all 라우트에 <span class="add">"cacheControl": "no-store, no-cache, must-revalidate"</span> 추가</code></pre>
+  </div>
+  <div class="entry">
+    <div class="callout ok"><b>실제 BTP CF 환경(AppRouter + XSUAA + IAS + html5-apps-repo)에서 원인 재현부터 수정 효과 검증까지 완전히 실증됨.</b></div>
+  </div>
+</div>
+</template>
+
+<!-- ============ 5. Q&A ============ -->
+<template id="tmpl-qa">
+<div class="panel" id="panel-qa">
+  <div class="panel-head"><h2>캐시 개념 Q&A</h2>
+    <p class="desc">조사 진행 중 정리된 HTTP 캐시 개념 문답 모음.</p>
+  </div>
+  <div class="entry">
+    <dl class="qa">
+      <dt>no-store / no-cache / must-revalidate 차이는?</dt>
+      <dd><ul>
+        <li><code>no-store</code> — 캐시에 저장 자체를 하지 마라</li>
+        <li><code>no-cache</code> — 저장은 하되, 쓰기 전에 매번 서버에 재검증해라</li>
+        <li><code>must-revalidate</code> — 유효기간(max-age)이 지난 뒤에만 강제로 재확인해라 (네트워크 장애 시 "그냥 옛날 거 쓰기" 예외를 금지)</li>
+      </ul></dd>
+
+      <dt>no-store와 no-cache를 같이 쓸 수 있나?</dt>
+      <dd>문법적으로 모순 없음. <code>no-store</code>가 저장 자체를 막아 <code>no-cache</code>가 적용될 상황 자체가 안 생김 — 사실상 중복이지만, 구현 편차에 대비한 이중 안전장치로 실무에서 흔히 같이 씀.</dd>
+
+      <dt>disk cache와 memory cache 차이는?</dt>
+      <dd>memory cache는 세션 동안 메모리에 들고 있는 것(탭 닫으면 사라짐), disk cache는 디스크에 저장(재시작해도 남음). 둘 다 서버 재확인 없이 그대로 재사용함 — Network 탭에 <code>(disk cache)</code>/<code>(memory cache)</code>로 표시, 실제 다운로드 크기가 아님.</dd>
+
+      <dt>cacheControl을 아예 안 쓰면 어떻게 되나?</dt>
+      <dd>브라우저 자체 휴리스틱(Last-Modified 기준 경과시간 비율)으로 캐시 여부/기간을 추정 — 시점에 따라 들쭉날쭉해서 예측 불가능. 실제 "간헐적" 증상 패턴과 일치.</dd>
+
+      <dt>이 휴리스틱이 브라우저마다 다른가?</dt>
+      <dd>HTTP 표준은 "써도 된다"고만 하고 정확한 공식은 강제하지 않아 Chrome/Edge, Firefox, Safari가 각자 다르게 구현함. cacheControl을 명시하면 이 편차 자체가 무의미해짐.</dd>
+    </dl>
+  </div>
+</div>
+</template>
+
+<!-- ============ 6. 슬로우 워크스루 ============ -->
+<template id="tmpl-walkthrough">
+<div class="panel" id="panel-walkthrough">
+  <div class="panel-head"><h2>단계별 슬로우 워크스루</h2>
+    <p class="desc">사용자 요청으로 취약 모드 재현을 처음부터 한 단계씩 멈춰가며 재실행한 기록.</p>
+  </div>
+
+  <div class="entry">
+    <h3>7.1 · 1차 테스트 — 취약 모드 재현</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>단계</th><th>수행 내용</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>구조 설명: crashtest.html=셸, crashtest.js=앱 로직(catch-all)</td><td>—</td></tr>
+        <tr><td>1–3</td><td>현재 상태 확인 → 취약 상태로 전환 → v1 소스 확인</td><td>catch-all이 수정본이었음 → 되돌림</td></tr>
+        <tr><td>4</td><td>v1 + 취약 설정으로 빌드/배포</td><td>성공</td></tr>
+        <tr><td>5</td><td>캐시 완전 삭제 후 새 창 접속</td><td>"사원번호: E12345 / 버전: v1" 정상</td></tr>
+        <tr><td>6</td><td>같은 창 유지, v2 배포</td><td>배포 성공 — 서버 입장에선 정상 배포</td></tr>
+        <tr><td>7</td><td>같은 창에서 캐시 안 지우고 새로고침만</td><td><b>"하얀화면"</b> — 재현 성공</td></tr>
+        <tr><td>8</td><td>콘솔 확인</td><td><code>TypeError: ... reading 'toUpperCase'</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout">사용자 직접 확인: <b>"html은 서버에서 호출, JS는 disk-cache에서 호출(max-age 때문)"</b> — 정확히 맞음으로 확인됨.</div>
+  </div>
+
+  <div class="entry">
+    <h3>7.2 · 2차 테스트 — 수정 모드 검증</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>단계</th><th>수행 내용</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td>9–10</td><td>catch-all을 수정본으로 복원 → v1 재배포</td><td>성공</td></tr>
+        <tr><td>11</td><td>캐시 완전 삭제 후 새 창 접속</td><td>v1 정상</td></tr>
+        <tr><td>12</td><td>같은 창 유지, v2 배포 (1차와 동일한 변경)</td><td>배포 성공</td></tr>
+        <tr><td>13</td><td>같은 창에서 캐시 안 지우고 새로고침만</td><td><b>"v2 (신규 배포)"가 크래시 없이 정상 출력</b></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout ok">동일한 배포 변경에 대해 cacheControl 설정 하나만 다르게 했을 때 결과가 완전히 갈림 — 취약 설정은 100% 크래시, 수정 설정은 100% 정상 반영.</div>
+  </div>
+</div>
+</template>
+
+<!-- ============ 7. welfare 실증 ============ -->
+<template id="tmpl-welfare">
+<div class="panel" id="panel-welfare">
+  <div class="panel-head"><h2>3차 · welfare 앱 실증 + 해시 라우팅 정밀 재현</h2>
+    <p class="desc">실제 프로덕션 소스 확인과, 실제 아키텍처(해시 라우팅+XML+JS)로의 정밀 재현.</p>
+  </div>
+
+  <div class="entry">
+    <h3>실제 welfare 앱 xs-app.json 확인 — 결정적 증거</h3>
+    <p>사용자가 SK ON 실제 <code>welfare</code> 앱의 xs-app.json을 공유. 저희가 가설·재현했던 것과 <b>정확히 동일한 구조적 갭</b>이 실제 프로덕션 코드에 그대로 존재함을 확인:</p>
+    <pre><code>{
+  "welcomeFile": "/welfare",
+  "sessionTimeout": 3600,
+  "routes": [
+    ⋯ (objectstore, mail, ecp, sfsf, odata, adobeapi 등 백엔드 라우트) ⋯
+    {
+      "source": "^/welfare/index.html$",
+      "service": "html5-apps-repo-rt",
+      "authenticationType": "xsuaa",
+<span class="add">      "cacheControl": "no-store, no-cache, must-revalidate"</span>   // ✅ 작년에 처리됨
+    },
+    {
+      "source": "^(.*)$",
+      "service": "html5-apps-repo-rt",
+      "authenticationType": "xsuaa"                             <span class="del">// ⚠️ cacheControl 없음</span>
+    }
+  ]
+}</code></pre>
+    <p style="font-size:12.5px;color:var(--ink-soft)">참고: catch-all 블록의 authenticationType 값에 둥근따옴표(smart quote)가 섞여 보이는 부분 발견 — 복사 과정 아티팩트인지 실제 파일 문제인지 원본 재확인 필요.</p>
+  </div>
+
+  <div class="entry">
+    <h3>실제 프로덕션 인시던트 정보</h3>
+    <dl class="kv">
+      <dt>현상</dt><dd>일부 메뉴 무반응/흰 화면, 메뉴 이동 시 URL만 바뀌고 화면 그대로, 행복연금 신청서 이미지가 다른 메뉴로 가도 겹쳐 남음</dd>
+      <dt>대상</dt><dd>김동환 (so22309), IP 10.86.126.55</dd>
+      <dt>영향 메뉴</dt><dd>단신부임신청 · 경조금(전체) · 행복나눔신청 · 산후조리원비 · 의료비 · 특수교육비 · 급여계좌등록변경 · 소득세율변경 · 퇴직금/행복연금("이미 가입됨" 오류)</dd>
+      <dt>스크린샷</dt><dd><code>#/CarRegistration</code> 정상 vs <code>#/ShortLivedApply</code> 회색화면+"조회 중입니다" 정지, 또는 완전 백지</dd>
+    </dl>
+    <p style="margin-top:10px">URL 패턴(<code>/welfare/index.html#/&lt;라우트&gt;</code>)으로 볼 때 각 메뉴는 별도 앱이 아니라 <b>하나의 UI5 앱 내 해시 라우팅으로 구분되는 View들</b> — 하나의 Component 번들을 여러 메뉴가 공유해, 캐싱 버그 하나가 여러 메뉴에 동시다발적으로 영향을 줄 수 있는 구조.</p>
+  </div>
+
+  <div class="entry">
+    <h3>해시 라우팅 정밀 재현 (<code>webapp/hashdemo/</code>)</h3>
+    <p>"XML과 JS를 직접 비교해야 하는가"라는 질문에서 출발, 실제 welfare 앱과 동일한 방식(해시 라우팅 + 진짜 <code>.view.xml</code> + 진짜 <code>.controller.js</code>)으로 구축.</p>
+    <div class="grid-2">
+      <div>
+        <span class="entry-label">CarRegistration (차량등록증)</span>
+        <p style="font-size:13px">HASH_CTX를 참조하지 않음 — 실제 스크린샷처럼 항상 정상 동작하도록 설계.</p>
+      </div>
+      <div>
+        <span class="entry-label">ShortLivedApply (단신부임신청)</span>
+        <p style="font-size:13px">busy 인디케이터 표시 → 비동기 조회 시뮬레이션 → <code>HASH_CTX.empNo</code>(v1)/<code>.employeeNumber</code>(v2) 읽음. 예외 시 busy를 못 풀어 <b>"조회 중" 상태로 영구 정지</b>.</p>
+      </div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:14px">
+    <table>
+      <thead><tr><th>단계</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td>취약: v1→v2 배포→같은 창 새로고침</td><td>차량등록증 정상, <b>단신부임신청은 조회 중 상태로 영구 정지</b> — 실제 프로덕션 스크린샷과 동일 패턴</td></tr>
+        <tr><td>콘솔</td><td><code>[hashdemo] ShortLivedApply render failed: TypeError: ...toUpperCase</code></td></tr>
+        <tr><td>수정: 동일 절차 반복</td><td>단신부임신청도 캐시 안 지우고 새로고침만으로 <b>정상 반영, 정지 없음</b></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout ok">실제 아키텍처(해시 라우팅, XML View, JS Controller, Component 번들링)로도 동일한 메커니즘과 수정 효과가 확인됨. "일부 메뉴만 문제, 나머지는 정상"이라는 실제 증상 패턴까지 정확히 재현.</div>
+  </div>
+</div>
+</template>
+
+<!-- ============ 8. 성능 ============ -->
+<template id="tmpl-perf">
+<div class="panel" id="panel-perf">
+  <div class="panel-head"><h2>성능 고려사항 및 대안 비교</h2>
+    <p class="desc">수정안을 실제 반영하기 전 검토한 성능 트레이드오프.</p>
+  </div>
+
+  <div class="entry">
+    <h3><code>no-store</code> 적용 시 성능 영향</h3>
+    <p>catch-all에 걸리는 모든 리소스가 캐시 혜택을 전혀 못 받음 — 매 로드마다 안 바뀐 파일도 전부 재다운로드. 다만 트래픽이 크지 않은 사내 앱 환경에서는 실제 영향이 제한적일 가능성이 높고, "매번 흰 화면"의 비용이 "매번 조금 더 로딩"보다 훨씬 큼.</p>
+  </div>
+
+  <div class="entry">
+    <h3>기각한 대안 — "문제되는 XML/메뉴만 선택적으로 no-cache"</h3>
+    <ol class="steps">
+      <li>다음에 "문제될 파일"을 미리 알 수 없음 — 매번 화이트리스트를 사후 관리하는 두더지잡기(whack-a-mole)가 됨</li>
+      <li>번들링된 경우 애초에 선택 불가 — 여러 메뉴가 Component-preload.js 하나로 뭉쳐있으면 일부만 다른 캐시 정책을 줄 방법이 없음</li>
+      <li>관리 부담 증가 — 메뉴 추가/변경마다 xs-app.json도 같이 유지보수해야 함</li>
+    </ol>
+  </div>
+
+  <div class="entry">
+    <h3>더 나은 절충안 — <code>no-cache</code> + ETag</h3>
+    <p>파일이 안 바뀌었으면 서버가 <code>304 Not Modified</code>로 응답해 캐시를 재사용(빠름), 바뀌었을 때만 새로 다운로드 — 이상적인 절충안.</p>
+    <div class="callout warn"><b>실측에서 발견한 함정</b> — <code>&lt;script src&gt;</code> 태그로 로드되는 리소스는 <code>no-cache</code>만으로는 재검증 자체를 안 타는 현상을 확인함 (그래서 최종적으로 <code>no-store</code>로 처리). 적용 전 반드시 실측 테스트 필요.</div>
+  </div>
+
+  <div class="grid-2">
+    <div class="entry">
+      <span class="entry-label">중장기 이상적 해법</span>
+      <p style="font-size:13.3px">content-hash 파일명 전략 — 배포마다 URL 자체가 바뀌게 해서 <code>max-age</code>를 길게 걸어도 안전. 빌드/배포 파이프라인 구조 변경 필요.</p>
+    </div>
+    <div class="entry">
+      <span class="entry-label">권장 순서</span>
+      <ol class="steps" style="margin-top:2px">
+        <li>단기: no-store 반영</li>
+        <li>중기: no-cache+ETag 실측 후 전환</li>
+        <li>장기: content-hash 전략 검토</li>
+      </ol>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- ============ 9. 남은 과제 ============ -->
+<template id="tmpl-todo">
+<div class="panel" id="panel-todo">
+  <div class="panel-head"><h2>남은 과제</h2>
+    <p class="desc">이번 재현 범위 밖 — 별도 조사/조치가 필요한 항목.</p>
+  </div>
+  <div class="entry">
+    <ol class="steps">
+      <li><b>db-deployer TLS 인증서 이슈</b> — Node 22/24 buildpack과 HANA Cloud 인증서 체인 검증 문제로 추정, 별도 조사 필요</li>
+      <li><b><code>annotations.cds</code>의 <code>incidentsID</code></b> — 스키마에 존재하지 않는 필드를 참조하는 기존 결함, 캐싱과 무관, 별도 수정 필요</li>
+      <li><b>미착수 가설 3건</b> — 세션/토큰 타임아웃 불일치, Work Zone 타일 sap-ui-version 고정, Destination TTL — 실제 XSUAA/IAS/Work Zone 설정 확인 필요</li>
+    </ol>
+  </div>
+</div>
+</template>
+
+<!-- ============ 10. 재현 가이드 ============ -->
+<template id="tmpl-guide">
+<div class="panel" id="panel-guide">
+  <div class="panel-head"><h2>재현 가이드 — 직접 실행용</h2>
+    <p class="desc">xs-app.json의 catch-all 라우트에 cacheControl이 없으면 흰 화면이, 명시하면 해결된다는 것을 실 BTP CF 환경에서 직접 확인하는 절차.</p>
+  </div>
+
+  <div class="entry">
+    <h3>사전 준비</h3>
+    <pre><code>cd demo01/frontend
+npm install          # 최초 1회만
+cf target            # org "BTP KR_pockr" / space "dev" 확인</code></pre>
+    <p>테스트 URL:</p>
+    <pre><code>https://btp-kr-pockr-dev-frontendui02-approuter.cfapps.ap12.hana.ondemand.com/frontendui02/crashtest.html</code></pre>
+  </div>
+
+  <div class="entry">
+    <h3>도구 스크립트 (<code>frontend/repro-scripts/</code>)</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>스크립트</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><code>mode-vulnerable.sh</code></td><td>catch-all → <code>max-age=31536000</code> (취약 모드)</td></tr>
+        <tr><td><code>mode-fixed.sh</code></td><td>catch-all → <code>no-store, no-cache, must-revalidate</code> (수정 모드)</td></tr>
+        <tr><td><code>deploy-v1.sh</code></td><td>crashtest 파일을 v1(<code>empNo</code>)로 맞추고 빌드+배포</td></tr>
+        <tr><td><code>deploy-v2.sh</code></td><td>crashtest 파일을 v2(<code>employeeNumber</code>)로 맞추고 빌드+배포</td></tr>
+        <tr><td><code>status.sh</code></td><td>현재 모드/버전 상태 확인</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="entry">
+      <h3>시나리오 A — 취약 모드</h3>
+      <pre><code>cd demo01/frontend/repro-scripts
+./mode-vulnerable.sh
+./deploy-v1.sh</code></pre>
+      <ol class="steps">
+        <li>캐시 완전 삭제 → 테스트 URL 접속 → v1 확인</li>
+        <li>같은 창 유지, 터미널에서 <code>./deploy-v2.sh</code></li>
+        <li>같은 창에서 캐시 안 지우고 새로고침만</li>
+        <li>결과: 흰 화면 + <code>TypeError</code></li>
+      </ol>
+    </div>
+    <div class="entry">
+      <h3>시나리오 B — 수정 모드</h3>
+      <pre><code>cd demo01/frontend/repro-scripts
+./mode-fixed.sh
+./deploy-v1.sh</code></pre>
+      <ol class="steps">
+        <li>캐시 완전 삭제 → 새 창 접속 → v1 확인</li>
+        <li>같은 창 유지, <code>./deploy-v2.sh</code></li>
+        <li>같은 창에서 캐시 안 지우고 새로고침만</li>
+        <li>결과: v2 정상 출력, 크래시 없음</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="entry">
+    <h3>주의사항</h3>
+    <ul class="plain">
+      <li>시크릿 창을 "새로" 열어도 기존 시크릿 창이 하나라도 남아있으면 캐시를 공유함 — 전부 닫거나 "인터넷 사용 기록 삭제" 사용</li>
+      <li>시나리오 A → B로 넘어갈 때 A에서 캐시가 오염된 창은 재사용하지 말 것 (수정 모드로 바꿔도 이미 캐시된 창은 소급 적용 안 됨)</li>
+      <li><code>status.sh</code>로 현재 로컬 소스의 모드/버전을 언제든 확인 가능</li>
+    </ul>
+  </div>
+</div>
+</template>
+
+<script>
+const panels = document.getElementById("panels");
+document.querySelectorAll('template[id^="tmpl-"]').forEach(t=>{
+  panels.appendChild(t.content.cloneNode(true));
+});
+document.getElementById("content").appendChild(panels);
+document.querySelectorAll(".panel").forEach(p=>{
+  const id = p.id.replace("panel-","");
+  p.dataset.active = (id===initial);
+});
+select(initial);
+</script>

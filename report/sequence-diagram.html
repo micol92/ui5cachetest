@@ -1,0 +1,336 @@
+<title>브라우저 → AppRouter 요청 흐름</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* 의도적 단일 다크 "청사진(blueprint)" 테마 — 시퀀스 다이어그램의 성격상 고정 배경을 씀 */
+:root{
+  --bg:#0b1622;
+  --bg-grid:#0f1e30;
+  --paper:#101f31;
+  --line:#2b445e;
+  --line-soft:#1c3348;
+  --ink:#e7f1fb;
+  --ink-soft:#8fa8c2;
+  --cyan:#5fd4ff;
+  --cyan-dim:#2a6d8c;
+  --ok:#5ef0a6;
+  --ok-bg:#123322;
+  --warn:#ff8a5b;
+  --warn-bg:#3a2013;
+  --warn-line:#ff8a5b;
+  --font-ui:'IBM Plex Sans KR','IBM Plex Sans',-apple-system,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;}
+body{
+  background:
+    linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0/100% 34px,
+    linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px) 0 0/34px 100%,
+    var(--bg);
+  color:var(--ink);
+  font-family:var(--font-ui);
+  padding:0 18px;
+}
+.wrap{max-width:1100px;margin:0 auto;padding-block:30px 60px;}
+
+header.page{
+  border:1px solid var(--line);
+  background:linear-gradient(180deg, rgba(95,212,255,.06), transparent 60%), var(--paper);
+  border-radius:10px;
+  padding:22px 26px;
+  margin-bottom:22px;
+}
+.eyebrow{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--cyan);margin-bottom:8px;display:flex;align-items:center;gap:8px;
+}
+.eyebrow::before{content:"◆";font-size:9px;}
+h1{
+  font-family:var(--font-ui);font-weight:700;font-size:25px;color:var(--ink);
+  margin:0 0 8px;text-wrap:balance;
+}
+.lede{color:var(--ink-soft);font-size:14px;max-width:70ch;line-height:1.6;margin:0;}
+
+.legend{
+  display:flex;flex-wrap:wrap;gap:18px;
+  margin-top:18px;padding-top:16px;border-top:1px solid var(--line-soft);
+  font-size:12px;color:var(--ink-soft);
+}
+.legend .item{display:flex;align-items:center;gap:7px;}
+.legend .swatch{width:14px;height:14px;border-radius:3px;flex:none;}
+.legend .swatch.cyan{background:var(--cyan);}
+.legend .swatch.ok{background:var(--ok);}
+.legend .swatch.warn{background:var(--warn);}
+.legend .swatch.line{background:none;border:1px dashed var(--ink-soft);}
+
+figure{margin:0;}
+.diagram-frame{
+  border:1px solid var(--line);border-radius:10px;background:var(--paper);
+  padding:6px;overflow-x:auto;
+}
+svg{display:block;min-width:820px;width:100%;height:auto;}
+figcaption{
+  font-size:12px;color:var(--ink-soft);text-align:center;margin-top:12px;
+  font-family:var(--font-mono);
+}
+
+footer.note{
+  margin-top:22px;padding:16px 20px;border-left:3px solid var(--cyan);
+  background:var(--paper);border-radius:0 8px 8px 0;font-size:13px;color:var(--ink-soft);
+}
+footer.note b{color:var(--ink);}
+
+@media (max-width:640px){
+  h1{font-size:21px;}
+}
+</style>
+
+<div class="wrap">
+  <header class="page">
+    <div class="eyebrow">Sequence · Browser → AppRouter → UI5 Freestyle</div>
+    <h1>브라우저 요청부터 UI5 컴포넌트 실행까지 — 전체 시퀀스</h1>
+    <p class="lede"><code>#/ShortLivedApply</code> 메뉴 진입을 예로, 최초 HTTP 요청부터 인증, 셸 로드, UI5 부트스트랩, 해시 라우팅, 그리고 캐싱 정책에 따라 결과가 갈리는 지점까지 4개 주체(브라우저 · AppRouter · XSUAA/IAS · html5-apps-repo-rt) 사이의 실제 상호작용을 순서대로 그렸습니다.</p>
+    <div class="legend">
+      <div class="item"><span class="swatch cyan"></span> 정상 요청/응답</div>
+      <div class="item"><span class="swatch line"></span> 브라우저 내부 처리(자기 호출)</div>
+      <div class="item"><span class="swatch ok"></span> 정상 결과 경로</div>
+      <div class="item"><span class="swatch warn"></span> 캐싱 버그가 발생하는 경로</div>
+    </div>
+  </header>
+
+  <figure>
+    <div class="diagram-frame">
+<svg viewBox="0 0 1040 1970" role="img" aria-label="브라우저가 /welfare/index.html에 요청을 보내면 AppRouter가 xs-app.json 규칙에 따라 인증 후 셸을 반환하고, UI5가 부트스트랩된다. 사용자가 해시 라우트로 이동하면 실무에서는 보통 Component-preload.js로 번들링된 View/Controller 코드를 요청하는데, catch-all 라우트에 캐시 정책이 없으면 브라우저가 서버에 묻지 않고 디스크 캐시의 구버전 번들을 그대로 실행해 셸이 제공하는 최신 데이터 형상과 불일치가 생겨 TypeError로 렌더링이 멈춘다. 하나의 번들을 여러 메뉴가 공유하므로 캐시 히트 한 번이 여러 메뉴에 동시에 영향을 준다. 캐시 정책이 있으면 매번 서버에 재확인해 정상 렌더링된다.">
+
+<defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="var(--cyan)"/>
+  </marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="var(--ok)"/>
+  </marker>
+  <marker id="ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="var(--warn)"/>
+  </marker>
+</defs>
+
+<!-- ============ LANE HEADERS ============ -->
+<g font-family="IBM Plex Sans KR, sans-serif" font-weight="700" font-size="13.5">
+  <rect x="60" y="14" width="140" height="40" rx="7" fill="#122238" stroke="var(--cyan)" stroke-width="1.2"/>
+  <text x="130" y="39" text-anchor="middle" fill="var(--ink)">브라우저</text>
+
+  <rect x="365" y="14" width="140" height="40" rx="7" fill="#122238" stroke="var(--line)" stroke-width="1.2"/>
+  <text x="435" y="34" text-anchor="middle" fill="var(--ink)">AppRouter</text>
+  <text x="435" y="48" text-anchor="middle" fill="var(--ink-soft)" font-size="9.5" font-family="JetBrains Mono, monospace" font-weight="400">xs-app.json</text>
+
+  <rect x="595" y="14" width="140" height="40" rx="7" fill="#122238" stroke="var(--line)" stroke-width="1.2"/>
+  <text x="665" y="39" text-anchor="middle" fill="var(--ink)">XSUAA / IAS</text>
+
+  <rect x="850" y="14" width="150" height="40" rx="7" fill="#122238" stroke="var(--line)" stroke-width="1.2"/>
+  <text x="925" y="39" text-anchor="middle" fill="var(--ink)" font-size="12">html5-apps-repo-rt</text>
+</g>
+
+<!-- ============ LIFELINES ============ -->
+<g stroke="var(--line)" stroke-width="1" stroke-dasharray="3 4">
+  <line x1="130" y1="54" x2="130" y2="1950"/>
+  <line x1="435" y1="54" x2="435" y2="1950"/>
+  <line x1="665" y1="54" x2="665" y2="1950"/>
+  <line x1="925" y1="54" x2="925" y2="1950"/>
+</g>
+
+<!-- ============ PHASE BANDS ============ -->
+<g font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--cyan)">
+  <rect x="40" y="66" width="980" height="382" rx="6" fill="#0e2136" opacity=".55"/>
+  <text x="52" y="82">PHASE A · 최초 요청 &amp; 인증</text>
+
+  <rect x="40" y="456" width="980" height="230" rx="6" fill="#0e2136" opacity=".35"/>
+  <text x="52" y="472">PHASE B · 셸(index.html) 로드</text>
+
+  <rect x="40" y="694" width="980" height="212" rx="6" fill="#0e2136" opacity=".55"/>
+  <text x="52" y="710">PHASE C · UI5 프레임워크 부트스트랩</text>
+
+  <rect x="40" y="914" width="980" height="1036" rx="6" fill="#241209" opacity=".45"/>
+  <text x="52" y="930" fill="var(--warn)">PHASE D · 해시 라우팅 &amp; 캐시 분기 — 문제 발생 지점</text>
+</g>
+
+<!-- ============ helper text style ============ -->
+<g font-family="IBM Plex Sans KR, sans-serif" font-size="11.5" fill="var(--ink)">
+
+<!-- 1 -->
+<line x1="130" y1="128" x2="428" y2="128" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="140" y="118">① GET /welfare/index.html</text>
+<text x="140" y="132" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">#해시(‑#/ShortLivedApply)는 서버로 전송되지 않음</text>
+
+<!-- 2 self note on AppRouter -->
+<rect x="435" y="150" width="270" height="42" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="447" y="166">② xs-app.json 매칭</text>
+<text x="447" y="180" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">^/welfare/index.html$ · cacheControl: no-store</text>
+
+<!-- 3 AppRouter -> Browser 302 -->
+<line x1="428" y1="212" x2="137" y2="212" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="152" y="206">③ 세션 없음 → 302 Redirect to XSUAA</text>
+
+<!-- 4 Browser -> XSUAA -->
+<line x1="130" y1="250" x2="658" y2="250" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="140" y="244">④ 브라우저가 리다이렉트 수행 — 인증 요청</text>
+
+<!-- 5 XSUAA self note (delegates to IAS) -->
+<rect x="665" y="272" width="270" height="42" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="677" y="288">⑤ IAS로 위임 인증 (SAML/OIDC)</text>
+<text x="677" y="302" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">세션 없으면 로그인 화면, 있으면 즉시 통과</text>
+
+<!-- 6 XSUAA -> Browser -->
+<line x1="658" y1="334" x2="137" y2="334" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="152" y="328">⑥ 토큰 발급 + AppRouter로 리다이렉트</text>
+
+<!-- 7 Browser -> AppRouter -->
+<line x1="130" y1="372" x2="428" y2="372" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="140" y="366">⑦ 인증 콜백 (Authorization Code)</text>
+
+<!-- 8 AppRouter -> repo -->
+<line x1="435" y1="490" x2="918" y2="490" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="447" y="484">⑧ GET /welfare/index.html (내부 프록시)</text>
+
+<!-- 9 repo -> AppRouter -->
+<line x1="925" y1="528" x2="442" y2="528" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="447" y="522">⑨ index.html 응답</text>
+
+<!-- 10 AppRouter -> Browser -->
+<line x1="428" y1="566" x2="137" y2="566" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="152" y="560">⑩ index.html 전달</text>
+<text x="152" y="580" fill="var(--ok)" font-family="JetBrains Mono, monospace" font-size="9.5">Cache-Control: no-store, no-cache, must-revalidate 헤더 포함 — 항상 최신</text>
+
+<!-- 11 Browser self -->
+<rect x="130" y="600" width="330" height="56" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="142" y="618">⑪ HTML 파싱 + 인라인 스크립트 실행</text>
+<text x="142" y="634" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">window.HASH_CTX = { employeeNumber:.. } 설정</text>
+<text x="142" y="648" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">← 항상 최신 배포분 (index.html은 매번 재수신)</text>
+
+<!-- 12 Browser -> AppRouter -->
+<line x1="130" y1="728" x2="428" y2="728" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="140" y="722">⑫ GET /resources/sap-ui-core.js</text>
+
+<!-- 13 AppRouter self -->
+<rect x="435" y="750" width="290" height="42" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="447" y="766">⑬ '^/resources/(.*)$' 매칭</text>
+<text x="447" y="780" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">destination "ui5" → ui5.sap.com 프록시</text>
+
+<!-- 14 AppRouter -> Browser -->
+<line x1="428" y1="812" x2="137" y2="812" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="152" y="806">⑭ sap-ui-core.js 등 프레임워크 파일 반환</text>
+
+<!-- 15 Browser self -->
+<rect x="130" y="832" width="330" height="42" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="142" y="848">⑮ UI5 Core 부트 완료</text>
+<text x="142" y="862" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">data-sap-ui-on-init 모듈(app.js) 실행</text>
+
+<!-- 16 Browser self : user click -->
+<rect x="130" y="950" width="330" height="42" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="142" y="966">⑯ 사용자가 "단신부임신청" 클릭</text>
+<text x="142" y="980" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">location.hash = '#/ShortLivedApply'</text>
+
+<!-- 17 -->
+<rect x="130" y="1000" width="330" height="42" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="142" y="1016">⑰ hashchange 이벤트 감지</text>
+<text x="142" y="1030" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">route = 'ShortLivedApply' 로 판별</text>
+
+<!-- 18 -->
+<rect x="130" y="1050" width="360" height="42" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="142" y="1066">⑱ 라우터가 View 로드 요청</text>
+<text x="142" y="1080" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">XMLView.create({viewName:'hashdemo.view.ShortLivedApply'})</text>
+
+<!-- 19 Browser -> AppRouter -->
+<line x1="130" y1="1122" x2="428" y2="1122" stroke="var(--cyan)" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="140" y="1116">⑲ GET .../ShortLivedApply.view.xml + .controller.js</text>
+<text x="140" y="1140" fill="var(--cyan)" font-family="JetBrains Mono, monospace" font-size="9.5">※ 실무 프로덕션 빌드에서는 이 파일들이 보통 Component-preload.js 하나로 번들링되어 요청됨</text>
+
+</g>
+
+<!-- ============ ALT BOX 1 — 캐시 분기 ============ -->
+<g>
+  <rect x="60" y="1160" width="960" height="280" rx="8" fill="none" stroke="var(--ink-soft)" stroke-width="1.2"/>
+  <path d="M60,1160 h90 v16 l-10,10 h-80 z" fill="#1a2c42" stroke="var(--ink-soft)" stroke-width="1"/>
+  <text x="72" y="1180" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--ink)" font-weight="700">alt</text>
+  <text x="200" y="1180" font-family="IBM Plex Sans KR, sans-serif" font-size="11.5" fill="var(--ink)">⑳ 분기 — catch-all 라우트(^(.*)$)에 cacheControl이 있는가?</text>
+
+  <!-- branch 1: 취약 (warn) -->
+  <rect x="76" y="1200" width="928" height="118" rx="6" fill="var(--warn-bg)" stroke="var(--warn)" stroke-width="1"/>
+  <text x="92" y="1220" fill="var(--warn)" font-weight="700" font-family="IBM Plex Sans KR, sans-serif" font-size="12">[취약] cacheControl 없음 / max-age 지정 — 실제 welfare catch-all 현황</text>
+  <text x="92" y="1240" fill="var(--ink)" font-family="IBM Plex Sans KR, sans-serif" font-size="11.5">브라우저가 서버에 묻지 않고, 디스크 캐시에 저장된 <tspan font-family="JetBrains Mono, monospace">구버전</tspan> 번들을 즉시 반환</text>
+  <text x="92" y="1258" fill="var(--warn)" font-family="JetBrains Mono, monospace" font-size="10.5">→ AppRouter · html5-apps-repo-rt 요청 자체가 발생하지 않음 (네트워크 탭: (disk cache))</text>
+  <text x="92" y="1278" fill="var(--warn)" font-family="IBM Plex Sans KR, sans-serif" font-size="10.5">⚠ Component-preload.js 하나에 여러 메뉴가 번들링되어 있다면, 이 캐시 히트 한 번이 번들에 포함된 <tspan font-weight="700">모든 메뉴에 동시 영향</tspan></text>
+  <line x1="92" y1="1296" x2="220" y2="1296" stroke="var(--warn)" stroke-width="1.3" marker-end="url(#ah-warn)"/>
+  <text x="230" y="1300" fill="var(--ink-soft)" font-family="IBM Plex Sans KR, sans-serif" font-size="10.5">Browser 내부에서 즉시 반환 (동일 lifeline)</text>
+
+  <line x1="76" y1="1330" x2="1004" y2="1330" stroke="var(--ink-soft)" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- branch 2: 수정 (ok) -->
+  <rect x="76" y="1340" width="928" height="80" rx="6" fill="var(--ok-bg)" stroke="var(--ok)" stroke-width="1"/>
+  <text x="92" y="1360" fill="var(--ok)" font-weight="700" font-family="IBM Plex Sans KR, sans-serif" font-size="12">[수정] cacheControl: no-store, no-cache, must-revalidate — 권장 조치</text>
+  <text x="92" y="1380" fill="var(--ink)" font-family="IBM Plex Sans KR, sans-serif" font-size="11.5">매번 AppRouter → html5-apps-repo-rt 왕복 → 서버가 갖고 있는 최신(v2) 번들 수신</text>
+  <line x1="450" y1="1398" x2="920" y2="1398" stroke="var(--ok)" stroke-width="1.1" marker-end="url(#ah-ok)"/>
+  <text x="460" y="1394" fill="var(--ok-bg)" opacity="0" font-size="1">.</text>
+</g>
+
+<!-- continue after alt box -->
+<g font-family="IBM Plex Sans KR, sans-serif" font-size="11.5" fill="var(--ink)">
+
+<!-- 21 Browser self -->
+<rect x="130" y="1460" width="360" height="42" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="142" y="1476">㉑ View.xml 파싱 + Controller 인스턴스화</text>
+<text x="142" y="1490" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">ShortLivedApply.controller.js → onInit() 호출</text>
+
+<!-- 22 -->
+<rect x="130" y="1510" width="330" height="42" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="142" y="1526">㉒ busy = true</text>
+<text x="142" y="1540" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">화면에 "조회 중입니다" 표시</text>
+
+<!-- 23 -->
+<rect x="130" y="1560" width="400" height="56" rx="5" fill="#152943" stroke="var(--line)" stroke-width="1"/>
+<text x="142" y="1578">㉓ window.HASH_CTX 필드 읽기 시도</text>
+<text x="142" y="1594" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">셸(⑪)은 이미 employeeNumber 제공 — 항상 최신</text>
+<text x="142" y="1608" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">컨트롤러 코드(⑳ 분기 결과)가 참조하는 필드명은?</text>
+
+</g>
+
+<!-- ============ ALT BOX 2 — 필드 일치 분기 (최종 결과) ============ -->
+<g>
+  <rect x="60" y="1636" width="960" height="290" rx="8" fill="none" stroke="var(--ink-soft)" stroke-width="1.2"/>
+  <path d="M60,1636 h90 v16 l-10,10 h-80 z" fill="#1a2c42" stroke="var(--ink-soft)" stroke-width="1"/>
+  <text x="72" y="1656" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--ink)" font-weight="700">alt</text>
+  <text x="200" y="1656" font-family="IBM Plex Sans KR, sans-serif" font-size="11.5" fill="var(--ink)">㉔ 분기 — 캐시된 Controller.js가 읽는 필드명이 셸과 일치하는가?</text>
+
+  <!-- branch 1: 불일치 (warn) - result -->
+  <rect x="76" y="1676" width="928" height="112" rx="6" fill="var(--warn-bg)" stroke="var(--warn)" stroke-width="1"/>
+  <text x="92" y="1696" fill="var(--warn)" font-weight="700" font-family="IBM Plex Sans KR, sans-serif" font-size="12">[불일치] ⑳에서 구버전 번들을 받은 경우 (ctx.empNo 참조)</text>
+  <text x="92" y="1716" fill="var(--ink)" font-family="JetBrains Mono, monospace" font-size="11">ctx.empNo → undefined → .toUpperCase() 호출 시 TypeError</text>
+  <text x="92" y="1736" fill="var(--ink)" font-family="IBM Plex Sans KR, sans-serif" font-size="11.5">예외가 catch 후 재throw되며 busy=false 코드에 도달하지 못함</text>
+  <text x="92" y="1756" fill="var(--warn)" font-weight="700" font-family="IBM Plex Sans KR, sans-serif" font-size="12.5">→ 결과: "조회 중입니다" 영구 정지, 또는 완전 백지(흰 화면)</text>
+  <text x="92" y="1774" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">실제 프로덕션 스크린샷(#/ShortLivedApply)과 동일 패턴</text>
+
+  <line x1="76" y1="1800" x2="1004" y2="1800" stroke="var(--ink-soft)" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- branch 2: 일치 (ok) - result -->
+  <rect x="76" y="1810" width="928" height="96" rx="6" fill="var(--ok-bg)" stroke="var(--ok)" stroke-width="1"/>
+  <text x="92" y="1830" fill="var(--ok)" font-weight="700" font-family="IBM Plex Sans KR, sans-serif" font-size="12">[일치] ⑳에서 최신 번들을 받은 경우 (ctx.employeeNumber 참조)</text>
+  <text x="92" y="1850" fill="var(--ink)" font-family="JetBrains Mono, monospace" font-size="11">ctx.employeeNumber.toUpperCase() 정상 실행 → message 설정</text>
+  <text x="92" y="1870" fill="var(--ok)" font-weight="700" font-family="IBM Plex Sans KR, sans-serif" font-size="12.5">→ 결과: busy=false, "단신부임신청" 화면 정상 렌더링</text>
+  <text x="92" y="1888" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="9.5">cacheControl 수정 후 실제 재현 테스트에서 확인된 결과</text>
+</g>
+
+</svg>
+    </div>
+  </figure>
+  <p style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--ink-soft); margin-top:10px;">
+    #/ShortLivedApply 진입 시의 24단계 상호작용 — Phase D의 두 분기(alt)가 실제 캐싱 버그의 발생/해결 지점
+  </p>
+
+  <footer class="note">
+    <b>핵심 포인트</b> — Phase A·B·C는 항상 동일하게(서버가 못박은 대로) 진행됩니다. 문제는 오직 <b>Phase D의 첫 번째 분기</b>(⑳)에서 갈립니다: catch-all 라우트에 <code style="font-family:'JetBrains Mono',monospace">cacheControl</code>이 없으면 브라우저가 AppRouter/html5-apps-repo-rt에 아예 묻지 않고 구버전 파일을 씁니다 — 그 결과가 두 번째 분기(㉔)에서 셸이 제공하는 최신 데이터 형상과 충돌해 화면이 멈춥니다.
+    <br><br>
+    <b>Component-preload.js에 대해</b> — 저희 hashdemo 데모는 View.xml/Controller.js를 개별 파일로 요청하도록 단순화했지만, 실제 조사(4.3절, 실 BTP 환경 1차 검증)에서는 <code style="font-family:'JetBrains Mono',monospace">Component-preload.js</code>라는 <b>번들 파일 하나가 (disk cache)</b>로 응답되는 것을 직접 확인했습니다. 여러 메뉴의 View/Controller/i18n이 빌드 시 이 파일 하나로 뭉쳐 배포되는 게 실무 표준(UI5 <code style="font-family:'JetBrains Mono',monospace">generateComponentPreload</code> 태스크)이라, ⑳ 분기에서의 캐시 히트 한 번이 그 번들에 포함된 <b>여러 메뉴 전체</b>에 동시에 영향을 줄 수 있습니다 — 실제 인시던트에서 여러 메뉴가 한꺼번에 영향받았던 것과 일치하는 부분입니다.
+  </footer>
+</div>
