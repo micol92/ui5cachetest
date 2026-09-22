@@ -1,0 +1,60 @@
+{
+  "welcomeFile": "/index.html",
+  "authenticationMethod": "route",
+  "routes": [
+      {
+        "source": "^/sap-ui-cachebuster-info.json",
+        "target": "/sap-ui-cachebuster-info.json",
+        "service": "html5-apps-repo-rt",
+        "authenticationType": "xsuaa",
+        "cacheControl": "no-cache, no-store, must-revalidate"
+      },
+      {
+        "source": "^/index.html",
+        "target": "/index.html",
+        "service": "html5-apps-repo-rt",
+        "authenticationType": "xsuaa",
+        "cacheControl": "no-store, no-cache, must-revalidate"
+      },
+      {
+        "source": "^/crashtest.html",
+        "target": "/crashtest.html",
+        "service": "html5-apps-repo-rt",
+        "authenticationType": "xsuaa",
+        "cacheControl": "no-store, no-cache, must-revalidate"
+      },
+      {
+        "source": "^/hashdemo/index.html",
+        "target": "/hashdemo/index.html",
+        "service": "html5-apps-repo-rt",
+        "authenticationType": "xsuaa",
+        "cacheControl": "no-store, no-cache, must-revalidate"
+      },
+    {
+      "source": "^/service/(.*)$",
+      "target": "/service/$1",
+      "destination": "jwincident-auth-token-exchg",
+      "authenticationType": "xsuaa",
+      "csrfProtection": false
+    },
+    {
+      "source": "^/resources/(.*)$",
+      "target": "/resources/$1",
+      "authenticationType": "none",
+      "destination": "ui5"
+    },
+    {
+      "source": "^/test-resources/(.*)$",
+      "target": "/test-resources/$1",
+      "authenticationType": "none",
+      "destination": "ui5"
+    },
+    {
+      "source": "^(.*)$",
+      "target": "$1",
+      "service": "html5-apps-repo-rt",
+      "authenticationType": "xsuaa",
+      "cacheControl": "max-age=31536000"
+    }
+  ]
+}

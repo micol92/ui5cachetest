@@ -1,0 +1,135 @@
+_schema-version: 3.3.0
+ID: jwincidentapp02
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: jwincidentapp02-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: jwincidentapp02-attachments
+  - name: jwincidentapp02-auditlog
+  - name: jwincidentapp02-db
+  - name: jwincidentapp02-auth
+  - name: malwaresvr
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+    readiness-health-check-http-endpoint: /health
+    readiness-health-check-type: http
+
+  build-parameters:
+    builder: npm
+
+- name: jwincidentapp02-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: jwincidentapp02-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: jwincidentapp02-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: jwincidentapp02-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - incidentui02.zip
+      name: incidentui02
+      target-path: resources/
+- name: incidentui02
+  type: html5
+  path: app/incidentui02
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: jwincidentapp02-approuter
+  type: approuter.nodejs
+  path: jwincidentapp02-approuter
+  requires:
+  - name: jwincidentapp02_html_repo_runtime
+  - name: jwincidentapp02-auth
+  - name: jwincidentapp02-destination-service
+  parameters:
+    disk-quota: 512M
+    memory: 512M
+
+resources:
+- name: jwincidentapp02-attachments
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: objectstore
+    service-plan: standard
+- name: jwincidentapp02-auditlog
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: auditlog
+    service-plan: standard
+- name: jwincidentapp02-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+    config:
+      database_id: 2ec0a886-207d-4c67-bde0-bbec20c27977
+- name: jwincidentapp02-auth
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      tenant-mode: dedicated
+      xsappname: jwincidentapp02-auth
+    path: ./xs-security.json
+    service: xsuaa
+    service-plan: application
+- name: jwincidentapp02-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: jwincidentapp02-html5-srv
+    service-plan: app-host
+- name: malwaresvr
+  type: org.cloudfoundry.existing-service
+- name: jwincidentapp02-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: false
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: jwincidentapp02-destination-service
+    service-plan: lite
+- name: jwincidentapp02_html_repo_runtime
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-plan: app-runtime
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npm ci
+    - npx cds build --production

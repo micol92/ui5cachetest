@@ -1,0 +1,9 @@
+<mvc:View
+    controllerName="hashdemo.controller.CarRegistration"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <VBox class="sapUiSmallMargin">
+        <Title text="차량등록증 등록" level="H2"/>
+        <Text text="신청 내역: 데이터가 없습니다." class="sapUiSmallMarginTop"/>
+    </VBox>
+</mvc:View>

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+resources/
+mta_archives/
+*_mta_build_tmp/
+*.bak-before-cachebuster
+.git.disabled-nested-repo/
+.DS_Store
+*.log

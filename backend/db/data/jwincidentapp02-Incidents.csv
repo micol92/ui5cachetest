@@ -1,0 +1,11 @@
+ID;title;urgency;status;customer_ID
+6344ef02-3936-4e61-a4f6-508a76e699d4;Laptop Screen Issue;High;In Progress;6344ef02-3936-4e61-a4f6-508a76e699d4
+c8f7f27d-25ef-4b40-9346-4dd2f23dd545;Smartphone Battery Problem;Medium;New;c8f7f27d-25ef-4b40-9346-4dd2f23dd545
+a1a27a5b-a9f5-4ae4-8a8f-be40bbf9a318;Printer Not Working;Low;Closed;a1a27a5b-a9f5-4ae4-8a8f-be40bbf9a318
+879d7786-0013-4d6d-beed-4c8f4d671a60;Internet Connection Drops;Medium;In Progress;879d7786-0013-4d6d-beed-4c8f4d671a60
+9dcdf80f-7a03-4bb9-9acb-eef5d60bb923;Software Installation Error;High;New;9dcdf80f-7a03-4bb9-9acb-eef5d60bb923
+5e6960ec-5853-49e3-b33a-b7dfe9f26c47;Network Connectivity Issue;High;In Progress;6344ef02-3936-4e61-a4f6-508a76e699d4
+ea53b920-0cbb-4fd5-a6d1-e2e7ef73cce1;Email Sync Problem;Medium;In Progress;c8f7f27d-25ef-4b40-9346-4dd2f23dd545
+20a6a12e-293d-4780-8ee8-9a52f105e15e;Data Backup Failure;High;New;a1a27a5b-a9f5-4ae4-8a8f-be40bbf9a318
+024bc3cd-98be-48e9-b9ac-3ba371fe426f;Application Crash;Medium;In Progress;879d7786-0013-4d6d-beed-4c8f4d671a60
+c0ff15f0-f970-459f-97e5-5e819408e051;File Corruption Issue;Low;Closed;9dcdf80f-7a03-4bb9-9acb-eef5d60bb923

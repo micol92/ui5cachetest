@@ -1,0 +1,11 @@
+ID;timestamp;author;message;incident_ID
+6344ef02-3936-4e61-a4f6-508a76e699d4;2021-06-27T14:52:23Z;John Doe;Hello, I have an issue with my laptop.;6344ef02-3936-4e61-a4f6-508a76e699d4
+c8f7f27d-25ef-4b40-9346-4dd2f23dd545;2021-06-27T15:15:10Z;Jane Smith;Sure, I can help you with that. What seems to be the problem?;6344ef02-3936-4e61-a4f6-508a76e699d4
+a1a27a5b-a9f5-4ae4-8a8f-be40bbf9a318;2021-06-28T09:30:45Z;John Doe;My laptop screen is flickering and the colors are distorted.;6344ef02-3936-4e61-a4f6-508a76e699d4
+879d7786-0013-4d6d-beed-4c8f4d671a60;2021-06-28T10:05:12Z;Jane Smith;It seems like a display issue. Have you tried restarting your laptop?;6344ef02-3936-4e61-a4f6-508a76e699d4
+9dcdf80f-7a03-4bb9-9acb-eef5d60bb923;2021-06-29T14:20:30Z;John Doe;Yes, I have restarted it multiple times but the issue persists.;6344ef02-3936-4e61-a4f6-508a76e699d4
+5e6960ec-5853-49e3-b33a-b7dfe9f26c47;2021-06-29T15:00:05Z;Jane Smith;In that case, I suggest you bring your laptop to our service center for further diagnosis.;6344ef02-3936-4e61-a4f6-508a76e699d4
+ea53b920-0cbb-4fd5-a6d1-e2e7ef73cce1;2021-06-30T11:45:55Z;John Doe;Alright, I will do that. Thank you!;6344ef02-3936-4e61-a4f6-508a76e699d4
+20a6a12e-293d-4780-8ee8-9a52f105e15e;2021-06-30T12:10:30Z;Jane Smith;You're welcome! Let me know if you need any further assistance.;6344ef02-3936-4e61-a4f6-508a76e699d4
+024bc3cd-98be-48e9-b9ac-3ba371fe426f;2021-07-01T09:15:20Z;Mark Johnson;Hi, I have an issue with my smartphone.;c8f7f27d-25ef-4b40-9346-4dd2f23dd545
+c0ff15f0-f970-459f-97e5-5e819408e051;2021-07-01T09:30:45Z;Emily Davis;I'm here to help. What seems to be the problem with your smartphone?;c8f7f27d-25ef-4b40-9346-4dd2f23dd545

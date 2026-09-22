@@ -1,0 +1,11 @@
+<mvc:View
+    controllerName="hashdemo.controller.ShortLivedApply"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    busyIndicatorDelay="0"
+    busy="{= ${view>/busy} }">
+    <VBox class="sapUiSmallMargin">
+        <Title text="단신부임신청" level="H2"/>
+        <Text text="{view>/message}" class="sapUiSmallMarginTop"/>
+    </VBox>
+</mvc:View>

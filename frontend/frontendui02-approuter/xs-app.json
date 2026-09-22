@@ -1,0 +1,23 @@
+{
+  "welcomeFile": "frontendui02/index.html",
+  "authenticationMethod": "route",
+  "sessionTimeout": 15,
+  "logout": {
+    "logoutEndpoint": "/logout",
+    "logoutPage": "logout.html"
+  },
+  "routes": [       
+      {
+          "source": "^/service/(.*)$",
+          "target": "/service/$1",
+          "destination": "srv-binding",
+          "authenticationType": "xsuaa"
+      },
+      {
+        "source": "^(.*)$",
+        "target": "$1",
+        "service": "html5-apps-repo-rt",
+        "authenticationType": "xsuaa"
+      }  
+  ]
+}

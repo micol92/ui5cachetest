@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Crash Test</title>
+<script>
+  // v2 배포: 필드명이 empNo -> employeeNumber 로 변경됨 (셸/설정 변경 시뮬레이션)
+  window.CRASH_CTX = { employeeNumber: 'E12345', name: '홍길동' };
+</script>
+</head>
+<body style="font-family: -apple-system, sans-serif; padding: 24px;">
+<h2>캐싱 버그 재현 테스트 페이지</h2>
+<div id="content" style="min-height:120px; border:1px solid #ddd; padding:16px; border-radius:6px;">로딩 중...</div>
+<script>
+  fetch('./crashtest.js').then(function (r) { return r.text(); }).then(function (code) { (0, eval)(code); });
+</script>
+</body>
+</html>

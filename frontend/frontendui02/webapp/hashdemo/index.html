@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Hash Routing 재현 데모</title>
+<script>
+  // v2 배포: 필드명이 empNo -> employeeNumber 로 변경됨
+  window.HASH_CTX = { employeeNumber: 'E12345', name: '홍길동' };
+</script>
+<script
+  id="sap-ui-bootstrap"
+  src="../resources/sap-ui-core.js"
+  data-sap-ui-theme="sap_horizon"
+  data-sap-ui-resource-roots='{ "hashdemo": "./" }'
+  data-sap-ui-compat-version="edge"
+  data-sap-ui-async="true"
+  data-sap-ui-frame-options="trusted"
+  data-sap-ui-on-init="module:hashdemo/app"
+></script>
+<style>
+  body { font-family: -apple-system, sans-serif; margin:0; }
+  #shell-header { background:#1c2b39; color:#fff; padding:10px 16px; font-size:14px; }
+  #menu button { margin:8px 8px 0 0; padding:6px 12px; }
+  #content { padding:16px; }
+</style>
+</head>
+<body class="sapUiBody" id="content-body">
+  <div id="shell-header">SK ON E-HR (Hash Routing 재현 데모) — v2 배포됨</div>
+  <div id="menu">
+    <button onclick="location.hash='#/CarRegistration'">차량등록증 등록</button>
+    <button onclick="location.hash='#/ShortLivedApply'">단신부임신청</button>
+  </div>
+  <div id="content">메뉴를 클릭하세요.</div>
+</body>
+</html>

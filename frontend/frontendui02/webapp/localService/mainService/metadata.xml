@@ -1,0 +1,1146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+    <edmx:Reference Uri="https://oasis-tcs.github.io/odata-vocabularies/vocabularies/Org.OData.Capabilities.V1.xml">
+        <edmx:Include Alias="Capabilities" Namespace="Org.OData.Capabilities.V1"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="https://sap.github.io/odata-vocabularies/vocabularies/Common.xml">
+        <edmx:Include Alias="Common" Namespace="com.sap.vocabularies.Common.v1"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="https://oasis-tcs.github.io/odata-vocabularies/vocabularies/Org.OData.Core.V1.xml">
+        <edmx:Include Alias="Core" Namespace="Org.OData.Core.V1"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="https://sap.github.io/odata-vocabularies/vocabularies/HTML5.xml">
+        <edmx:Include Alias="HTML5" Namespace="com.sap.vocabularies.HTML5.v1"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="https://sap.github.io/odata-vocabularies/vocabularies/PersonalData.xml">
+        <edmx:Include Alias="PersonalData" Namespace="com.sap.vocabularies.PersonalData.v1"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="https://sap.github.io/odata-vocabularies/vocabularies/UI.xml">
+        <edmx:Include Alias="UI" Namespace="com.sap.vocabularies.UI.v1"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="https://oasis-tcs.github.io/odata-vocabularies/vocabularies/Org.OData.Validation.V1.xml">
+        <edmx:Include Alias="Validation" Namespace="Org.OData.Validation.V1"/>
+    </edmx:Reference>
+    <edmx:DataServices>
+        <Schema Namespace="jwincidentapp02Srv" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+            <Annotation Term="Core.Links">
+                <Collection>
+                    <Record>
+                        <PropertyValue Property="rel" String="author"/>
+                        <PropertyValue Property="href" String="https://cap.cloud.sap"/>
+                    </Record>
+                </Collection>
+            </Annotation>
+            <EntityContainer Name="EntityContainer">
+                <EntitySet Name="Incidents" EntityType="jwincidentapp02Srv.Incidents">
+                    <NavigationPropertyBinding Path="attachments" Target="Incidents_attachments"/>
+                    <NavigationPropertyBinding Path="conversations" Target="Conversations"/>
+                    <NavigationPropertyBinding Path="customer" Target="Customers"/>
+                    <NavigationPropertyBinding Path="changes" Target="ChangeView"/>
+                    <NavigationPropertyBinding Path="SiblingEntity" Target="Incidents"/>
+                </EntitySet>
+                <EntitySet Name="Customers" EntityType="jwincidentapp02Srv.Customers">
+                    <NavigationPropertyBinding Path="incidents" Target="Incidents"/>
+                    <NavigationPropertyBinding Path="SiblingEntity" Target="Customers"/>
+                </EntitySet>
+                <EntitySet Name="Conversations" EntityType="jwincidentapp02Srv.Conversations">
+                    <NavigationPropertyBinding Path="incident" Target="Incidents"/>
+                    <NavigationPropertyBinding Path="SiblingEntity" Target="Conversations"/>
+                </EntitySet>
+                <EntitySet Name="ChangeView" EntityType="jwincidentapp02Srv.ChangeView"/>
+                <EntitySet Name="Incidents_attachments" EntityType="jwincidentapp02Srv.Incidents_attachments">
+                    <NavigationPropertyBinding Path="up_" Target="Incidents"/>
+                    <NavigationPropertyBinding Path="SiblingEntity" Target="Incidents_attachments"/>
+                </EntitySet>
+            </EntityContainer>
+            <EntityType Name="Incidents">
+                <Key>
+                    <PropertyRef Name="ID"/>
+                    <PropertyRef Name="IsActiveEntity"/>
+                </Key>
+                <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="title" Type="Edm.String" MaxLength="100"/>
+                <Property Name="urgency" Type="Edm.String" MaxLength="20"/>
+                <Property Name="status" Type="Edm.String" MaxLength="20"/>
+                <NavigationProperty Name="attachments" Type="Collection(jwincidentapp02Srv.Incidents_attachments)" Partner="up_">
+                    <OnDelete Action="Cascade"/>
+                </NavigationProperty>
+                <NavigationProperty Name="conversations" Type="Collection(jwincidentapp02Srv.Conversations)" Partner="incident">
+                    <OnDelete Action="Cascade"/>
+                </NavigationProperty>
+                <NavigationProperty Name="customer" Type="jwincidentapp02Srv.Customers" Partner="incidents">
+                    <ReferentialConstraint Property="customer_ID" ReferencedProperty="ID"/>
+                </NavigationProperty>
+                <Property Name="customer_ID" Type="Edm.Guid"/>
+                <NavigationProperty Name="changes" Type="Collection(jwincidentapp02Srv.ChangeView)"/>
+                <Property Name="IsActiveEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="true"/>
+                <Property Name="HasActiveEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
+                <Property Name="HasDraftEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
+                <NavigationProperty Name="DraftAdministrativeData" Type="jwincidentapp02Srv.DraftAdministrativeData" ContainsTarget="true"/>
+                <NavigationProperty Name="SiblingEntity" Type="jwincidentapp02Srv.Incidents"/>
+            </EntityType>
+            <EntityType Name="Customers">
+                <Key>
+                    <PropertyRef Name="ID"/>
+                    <PropertyRef Name="IsActiveEntity"/>
+                </Key>
+                <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="firstName" Type="Edm.String" MaxLength="50"/>
+                <Property Name="lastName" Type="Edm.String" MaxLength="50"/>
+                <Property Name="name" Type="Edm.String" MaxLength="100"/>
+                <Property Name="phoneNumber" Type="Edm.String" MaxLength="20"/>
+                <Property Name="email" Type="Edm.String" MaxLength="100"/>
+                <Property Name="creditCardNumber" Type="Edm.String" MaxLength="20"/>
+                <NavigationProperty Name="incidents" Type="Collection(jwincidentapp02Srv.Incidents)" Partner="customer"/>
+                <Property Name="IsActiveEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="true"/>
+                <Property Name="HasActiveEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
+                <Property Name="HasDraftEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
+                <NavigationProperty Name="DraftAdministrativeData" Type="jwincidentapp02Srv.DraftAdministrativeData" ContainsTarget="true"/>
+                <NavigationProperty Name="SiblingEntity" Type="jwincidentapp02Srv.Customers"/>
+            </EntityType>
+            <EntityType Name="Conversations">
+                <Key>
+                    <PropertyRef Name="ID"/>
+                    <PropertyRef Name="IsActiveEntity"/>
+                </Key>
+                <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="timestamp" Type="Edm.DateTimeOffset" Precision="7"/>
+                <Property Name="author" Type="Edm.String" MaxLength="100"/>
+                <Property Name="message" Type="Edm.String" MaxLength="500"/>
+                <NavigationProperty Name="incident" Type="jwincidentapp02Srv.Incidents" Partner="conversations">
+                    <ReferentialConstraint Property="incident_ID" ReferencedProperty="ID"/>
+                </NavigationProperty>
+                <Property Name="incident_ID" Type="Edm.Guid"/>
+                <Property Name="IsActiveEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="true"/>
+                <Property Name="HasActiveEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
+                <Property Name="HasDraftEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
+                <NavigationProperty Name="DraftAdministrativeData" Type="jwincidentapp02Srv.DraftAdministrativeData" ContainsTarget="true"/>
+                <NavigationProperty Name="SiblingEntity" Type="jwincidentapp02Srv.Conversations"/>
+            </EntityType>
+            <EntityType Name="ChangeView">
+                <Key>
+                    <PropertyRef Name="ID"/>
+                </Key>
+                <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="keys" Type="Edm.String"/>
+                <Property Name="attribute" Type="Edm.String"/>
+                <Property Name="valueChangedFrom" Type="Edm.String"/>
+                <Property Name="valueChangedTo" Type="Edm.String"/>
+                <Property Name="entity" Type="Edm.String"/>
+                <Property Name="serviceEntity" Type="Edm.String"/>
+                <Property Name="parentKey" Type="Edm.Guid"/>
+                <Property Name="serviceEntityPath" Type="Edm.String"/>
+                <Property Name="modification" Type="Edm.String"/>
+                <Property Name="valueDataType" Type="Edm.String"/>
+                <Property Name="changeLog_ID" Type="Edm.Guid"/>
+                <Property Name="objectID" Type="Edm.String"/>
+                <Property Name="parentObjectID" Type="Edm.String"/>
+                <Property Name="entityKey" Type="Edm.Guid"/>
+                <Property Name="createdAt" Type="Edm.DateTimeOffset" Precision="7"/>
+                <Property Name="createdBy" Type="Edm.String" MaxLength="255"/>
+            </EntityType>
+            <EntityType Name="DraftAdministrativeData">
+                <Key>
+                    <PropertyRef Name="DraftUUID"/>
+                </Key>
+                <Property Name="DraftUUID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="CreationDateTime" Type="Edm.DateTimeOffset" Precision="7"/>
+                <Property Name="CreatedByUser" Type="Edm.String" MaxLength="256"/>
+                <Property Name="DraftIsCreatedByMe" Type="Edm.Boolean"/>
+                <Property Name="LastChangeDateTime" Type="Edm.DateTimeOffset" Precision="7"/>
+                <Property Name="LastChangedByUser" Type="Edm.String" MaxLength="256"/>
+                <Property Name="InProcessByUser" Type="Edm.String" MaxLength="256"/>
+                <Property Name="DraftIsProcessedByMe" Type="Edm.Boolean"/>
+            </EntityType>
+            <EntityType Name="Incidents_attachments">
+                <Key>
+                    <PropertyRef Name="up__ID"/>
+                    <PropertyRef Name="ID"/>
+                    <PropertyRef Name="IsActiveEntity"/>
+                </Key>
+                <NavigationProperty Name="up_" Type="jwincidentapp02Srv.Incidents" Nullable="false" Partner="attachments">
+                    <ReferentialConstraint Property="up__ID" ReferencedProperty="ID"/>
+                </NavigationProperty>
+                <Property Name="up__ID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="createdAt" Type="Edm.DateTimeOffset" Precision="7"/>
+                <Property Name="createdBy" Type="Edm.String" MaxLength="255"/>
+                <Property Name="modifiedAt" Type="Edm.DateTimeOffset" Precision="7"/>
+                <Property Name="modifiedBy" Type="Edm.String" MaxLength="255"/>
+                <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="url" Type="Edm.String"/>
+                <Property Name="content" Type="Edm.Stream"/>
+                <Property Name="mimeType" Type="Edm.String" DefaultValue="application/octet-stream"/>
+                <Property Name="filename" Type="Edm.String"/>
+                <Property Name="status" Type="Edm.String" DefaultValue="Unscanned"/>
+                <Property Name="note" Type="Edm.String"/>
+                <Property Name="IsActiveEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="true"/>
+                <Property Name="HasActiveEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
+                <Property Name="HasDraftEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
+                <NavigationProperty Name="DraftAdministrativeData" Type="jwincidentapp02Srv.DraftAdministrativeData" ContainsTarget="true"/>
+                <NavigationProperty Name="SiblingEntity" Type="jwincidentapp02Srv.Incidents_attachments"/>
+            </EntityType>
+            <Action Name="updateStatus" IsBound="true">
+                <Parameter Name="in" Type="jwincidentapp02Srv.Incidents"/>
+                <Parameter Name="incidentID" Type="Edm.Guid"/>
+                <Parameter Name="newStatus" Type="Edm.String" MaxLength="20"/>
+                <ReturnType Type="Edm.String"/>
+            </Action>
+            <Action Name="action1" IsBound="true">
+                <Parameter Name="in" Type="jwincidentapp02Srv.Incidents"/>
+                <ReturnType Type="Edm.String"/>
+            </Action>
+            <Action Name="draftPrepare" IsBound="true" EntitySetPath="in">
+                <Parameter Name="in" Type="jwincidentapp02Srv.Incidents"/>
+                <Parameter Name="SideEffectsQualifier" Type="Edm.String"/>
+                <ReturnType Type="jwincidentapp02Srv.Incidents"/>
+            </Action>
+            <Action Name="draftPrepare" IsBound="true" EntitySetPath="in">
+                <Parameter Name="in" Type="jwincidentapp02Srv.Customers"/>
+                <Parameter Name="SideEffectsQualifier" Type="Edm.String"/>
+                <ReturnType Type="jwincidentapp02Srv.Customers"/>
+            </Action>
+            <Action Name="draftPrepare" IsBound="true" EntitySetPath="in">
+                <Parameter Name="in" Type="jwincidentapp02Srv.Conversations"/>
+                <Parameter Name="SideEffectsQualifier" Type="Edm.String"/>
+                <ReturnType Type="jwincidentapp02Srv.Conversations"/>
+            </Action>
+            <Action Name="draftPrepare" IsBound="true" EntitySetPath="in">
+                <Parameter Name="in" Type="jwincidentapp02Srv.Incidents_attachments"/>
+                <Parameter Name="SideEffectsQualifier" Type="Edm.String"/>
+                <ReturnType Type="jwincidentapp02Srv.Incidents_attachments"/>
+            </Action>
+            <Action Name="draftActivate" IsBound="true" EntitySetPath="in">
+                <Parameter Name="in" Type="jwincidentapp02Srv.Incidents"/>
+                <ReturnType Type="jwincidentapp02Srv.Incidents"/>
+            </Action>
+            <Action Name="draftActivate" IsBound="true" EntitySetPath="in">
+                <Parameter Name="in" Type="jwincidentapp02Srv.Customers"/>
+                <ReturnType Type="jwincidentapp02Srv.Customers"/>
+            </Action>
+            <Action Name="draftEdit" IsBound="true" EntitySetPath="in">
+                <Parameter Name="in" Type="jwincidentapp02Srv.Incidents"/>
+                <Parameter Name="PreserveChanges" Type="Edm.Boolean"/>
+                <ReturnType Type="jwincidentapp02Srv.Incidents"/>
+            </Action>
+            <Action Name="draftEdit" IsBound="true" EntitySetPath="in">
+                <Parameter Name="in" Type="jwincidentapp02Srv.Customers"/>
+                <Parameter Name="PreserveChanges" Type="Edm.Boolean"/>
+                <ReturnType Type="jwincidentapp02Srv.Customers"/>
+            </Action>
+            <Annotations Target="jwincidentapp02Srv.Incidents">
+                <Annotation Term="UI.HeaderInfo">
+                    <Record Type="UI.HeaderInfoType">
+                        <PropertyValue Property="TypeName" String="Incident"/>
+                        <PropertyValue Property="TypeNamePlural" String="Incidents"/>
+                        <PropertyValue Property="Title">
+                            <Record Type="UI.DataField">
+                                <PropertyValue Property="Value" Path="ID"/>
+                            </Record>
+                        </PropertyValue>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.Identification">
+                    <Collection>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="ID"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.DataPoint" Qualifier="title">
+                    <Record Type="UI.DataPointType">
+                        <PropertyValue Property="Value" Path="title"/>
+                        <PropertyValue Property="Title" String="Title3"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.DataPoint" Qualifier="urgency">
+                    <Record Type="UI.DataPointType">
+                        <PropertyValue Property="Value" Path="urgency"/>
+                        <PropertyValue Property="Title" String="Urgency"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.DataPoint" Qualifier="status">
+                    <Record Type="UI.DataPointType">
+                        <PropertyValue Property="Value" Path="status"/>
+                        <PropertyValue Property="Title" String="Status"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.LineItem">
+                    <Collection>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="ID"/>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="title"/>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="urgency"/>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="status"/>
+                        </Record>
+                        <Record Type="UI.DataFieldForAction">
+                            <PropertyValue Property="Action" String="jwincidentapp02Srv.updateStatus"/>
+                            <PropertyValue Property="Label" String="Update Status"/>
+                        </Record>
+                        <Record Type="UI.DataFieldForAction">
+                            <PropertyValue Property="Action" String="jwincidentapp02Srv.action1"/>
+                            <PropertyValue Property="Label" String="Closing Incidents"/>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Label" String="Customer"/>
+                            <PropertyValue Property="Value" Path="customer_ID"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.FieldGroup" Qualifier="Main">
+                    <Record Type="UI.FieldGroupType">
+                        <PropertyValue Property="Data">
+                            <Collection>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="ID"/>
+                                </Record>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="title"/>
+                                </Record>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="urgency"/>
+                                </Record>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="status"/>
+                                </Record>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Label" String="Customer"/>
+                                    <PropertyValue Property="Value" Path="customer_ID"/>
+                                </Record>
+                            </Collection>
+                        </PropertyValue>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.HeaderFacets">
+                    <Collection>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="Target" AnnotationPath="@UI.DataPoint#title"/>
+                        </Record>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="Target" AnnotationPath="@UI.DataPoint#urgency"/>
+                        </Record>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="Target" AnnotationPath="@UI.DataPoint#status"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.Facets">
+                    <Collection>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="ID" String="Main"/>
+                            <PropertyValue Property="Label" String="General Information"/>
+                            <PropertyValue Property="Target" AnnotationPath="@UI.FieldGroup#Main"/>
+                        </Record>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="ID" String="Conversations"/>
+                            <PropertyValue Property="Target" AnnotationPath="conversations/@UI.LineItem"/>
+                        </Record>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="Target" AnnotationPath="attachments/@UI.LineItem"/>
+                            <PropertyValue Property="Label" String="Attachments"/>
+                        </Record>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="ID" String="ChangeHistoryFacet"/>
+                            <PropertyValue Property="Label" String="Change History"/>
+                            <PropertyValue Property="Target" AnnotationPath="changes/@UI.PresentationVariant"/>
+                            <Annotation Term="UI.PartOfPreview" Bool="false"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.SelectionFields">
+                    <Collection>
+                        <PropertyPath>customer_ID</PropertyPath>
+                    </Collection>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.EntityContainer/Incidents">
+                <Annotation Term="Common.DraftRoot">
+                    <Record Type="Common.DraftRootType">
+                        <PropertyValue Property="ActivationAction" String="jwincidentapp02Srv.draftActivate"/>
+                        <PropertyValue Property="EditAction" String="jwincidentapp02Srv.draftEdit"/>
+                        <PropertyValue Property="PreparationAction" String="jwincidentapp02Srv.draftPrepare"/>
+                    </Record>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/ID">
+                <Annotation Term="Common.Label" String="ID"/>
+                <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/title">
+                <Annotation Term="Common.Label" String="Title"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/urgency">
+                <Annotation Term="Common.Label" String="Urgency"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/status">
+                <Annotation Term="Common.Label" String="Status"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/conversations">
+                <Annotation Term="Common.Label" String="Conversations"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/customer">
+                <Annotation Term="Common.Label" String="Customer"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/customer_ID">
+                <Annotation Term="Common.ValueList">
+                    <Record Type="Common.ValueListType">
+                        <PropertyValue Property="CollectionPath" String="Customers"/>
+                        <PropertyValue Property="Parameters">
+                            <Collection>
+                                <Record Type="Common.ValueListParameterInOut">
+                                    <PropertyValue Property="LocalDataProperty" PropertyPath="customer_ID"/>
+                                    <PropertyValue Property="ValueListProperty" String="ID"/>
+                                </Record>
+                                <Record Type="Common.ValueListParameterDisplayOnly">
+                                    <PropertyValue Property="ValueListProperty" String="firstName"/>
+                                </Record>
+                                <Record Type="Common.ValueListParameterDisplayOnly">
+                                    <PropertyValue Property="ValueListProperty" String="lastName"/>
+                                </Record>
+                                <Record Type="Common.ValueListParameterDisplayOnly">
+                                    <PropertyValue Property="ValueListProperty" String="phoneNumber"/>
+                                </Record>
+                                <Record Type="Common.ValueListParameterDisplayOnly">
+                                    <PropertyValue Property="ValueListProperty" String="email"/>
+                                </Record>
+                            </Collection>
+                        </PropertyValue>
+                    </Record>
+                </Annotation>
+                <Annotation Term="Common.Label" String="Customer"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/IsActiveEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/HasActiveEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/HasDraftEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents/DraftAdministrativeData">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.updateStatus(jwincidentapp02Srv.Incidents)">
+                <Annotation Term="Common.SideEffects">
+                    <Record Type="Common.SideEffectsType">
+                        <PropertyValue Property="TargetProperties">
+                            <Collection>
+                                <String>changes</String>
+                            </Collection>
+                        </PropertyValue>
+                    </Record>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.action1(jwincidentapp02Srv.Incidents)">
+                <Annotation Term="Common.SideEffects">
+                    <Record Type="Common.SideEffectsType">
+                        <PropertyValue Property="TargetProperties">
+                            <Collection>
+                                <String>changes</String>
+                            </Collection>
+                        </PropertyValue>
+                    </Record>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers">
+                <Annotation Term="UI.HeaderInfo">
+                    <Record Type="UI.HeaderInfoType">
+                        <PropertyValue Property="TypeName" String="Customer"/>
+                        <PropertyValue Property="TypeNamePlural" String="Customers"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.DataPoint" Qualifier="firstName">
+                    <Record Type="UI.DataPointType">
+                        <PropertyValue Property="Value" Path="firstName"/>
+                        <PropertyValue Property="Title" String="First Name"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.DataPoint" Qualifier="lastName">
+                    <Record Type="UI.DataPointType">
+                        <PropertyValue Property="Value" Path="lastName"/>
+                        <PropertyValue Property="Title" String="Last Name"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.DataPoint" Qualifier="phoneNumber">
+                    <Record Type="UI.DataPointType">
+                        <PropertyValue Property="Value" Path="phoneNumber"/>
+                        <PropertyValue Property="Title" String="Phone Number"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.LineItem">
+                    <Collection>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="firstName"/>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="lastName"/>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="phoneNumber"/>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="email"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.FieldGroup" Qualifier="Main">
+                    <Record Type="UI.FieldGroupType">
+                        <PropertyValue Property="Data">
+                            <Collection>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="firstName"/>
+                                </Record>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="lastName"/>
+                                </Record>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="phoneNumber"/>
+                                </Record>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="email"/>
+                                </Record>
+                            </Collection>
+                        </PropertyValue>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.HeaderFacets">
+                    <Collection>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="Target" AnnotationPath="@UI.DataPoint#firstName"/>
+                        </Record>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="Target" AnnotationPath="@UI.DataPoint#lastName"/>
+                        </Record>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="Target" AnnotationPath="@UI.DataPoint#phoneNumber"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.Facets">
+                    <Collection>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="ID" String="Main"/>
+                            <PropertyValue Property="Label" String="General Information"/>
+                            <PropertyValue Property="Target" AnnotationPath="@UI.FieldGroup#Main"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.EntityContainer/Customers">
+                <Annotation Term="PersonalData.DataSubjectRole" String="Customer"/>
+                <Annotation Term="PersonalData.EntitySemantics" String="DataSubject"/>
+                <Annotation Term="Common.DraftRoot">
+                    <Record Type="Common.DraftRootType">
+                        <PropertyValue Property="ActivationAction" String="jwincidentapp02Srv.draftActivate"/>
+                        <PropertyValue Property="EditAction" String="jwincidentapp02Srv.draftEdit"/>
+                        <PropertyValue Property="PreparationAction" String="jwincidentapp02Srv.draftPrepare"/>
+                    </Record>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/ID">
+                <Annotation Term="PersonalData.FieldSemantics" String="DataSubjectID"/>
+                <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/firstName">
+                <Annotation Term="PersonalData.IsPotentiallyPersonal" Bool="true"/>
+                <Annotation Term="Common.Label" String="First Name"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/lastName">
+                <Annotation Term="PersonalData.IsPotentiallyPersonal" Bool="true"/>
+                <Annotation Term="Common.Label" String="Last Name"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/name">
+                <Annotation Term="Core.Computed" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/phoneNumber">
+                <Annotation Term="Common.Label" String="Phone Number"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/email">
+                <Annotation Term="PersonalData.IsPotentiallyPersonal" Bool="true"/>
+                <Annotation Term="Common.Label" String="Email"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/creditCardNumber">
+                <Annotation Term="PersonalData.IsPotentiallySensitive" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/incidents">
+                <Annotation Term="Common.Label" String="Incidents"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/IsActiveEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/HasActiveEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/HasDraftEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Customers/DraftAdministrativeData">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations">
+                <Annotation Term="UI.HeaderInfo">
+                    <Record Type="UI.HeaderInfoType">
+                        <PropertyValue Property="TypeName" String="Conversation"/>
+                        <PropertyValue Property="TypeNamePlural" String="Conversations"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.DataPoint" Qualifier="timestamp">
+                    <Record Type="UI.DataPointType">
+                        <PropertyValue Property="Value" Path="timestamp"/>
+                        <PropertyValue Property="Title" String="Timestamp"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.DataPoint" Qualifier="author">
+                    <Record Type="UI.DataPointType">
+                        <PropertyValue Property="Value" Path="author"/>
+                        <PropertyValue Property="Title" String="Author"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.DataPoint" Qualifier="message">
+                    <Record Type="UI.DataPointType">
+                        <PropertyValue Property="Value" Path="message"/>
+                        <PropertyValue Property="Title" String="Message"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.LineItem">
+                    <Collection>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="timestamp"/>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="author"/>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="message"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.FieldGroup" Qualifier="Main">
+                    <Record Type="UI.FieldGroupType">
+                        <PropertyValue Property="Data">
+                            <Collection>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="timestamp"/>
+                                </Record>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="author"/>
+                                </Record>
+                                <Record Type="UI.DataField">
+                                    <PropertyValue Property="Value" Path="message"/>
+                                </Record>
+                            </Collection>
+                        </PropertyValue>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.HeaderFacets">
+                    <Collection>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="Target" AnnotationPath="@UI.DataPoint#timestamp"/>
+                        </Record>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="Target" AnnotationPath="@UI.DataPoint#author"/>
+                        </Record>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="Target" AnnotationPath="@UI.DataPoint#message"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.Facets">
+                    <Collection>
+                        <Record Type="UI.ReferenceFacet">
+                            <PropertyValue Property="ID" String="Main"/>
+                            <PropertyValue Property="Label" String="General Information"/>
+                            <PropertyValue Property="Target" AnnotationPath="@UI.FieldGroup#Main"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.SelectionFields">
+                    <Collection>
+                        <PropertyPath>incident_ID</PropertyPath>
+                    </Collection>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.EntityContainer/Conversations">
+                <Annotation Term="Common.DraftNode">
+                    <Record Type="Common.DraftNodeType">
+                        <PropertyValue Property="PreparationAction" String="jwincidentapp02Srv.draftPrepare"/>
+                    </Record>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations/ID">
+                <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations/timestamp">
+                <Annotation Term="Common.Label" String="Timestamp"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations/author">
+                <Annotation Term="Common.Label" String="Author"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations/message">
+                <Annotation Term="Common.Label" String="Message"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations/incident">
+                <Annotation Term="Common.Label" String="Incident"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations/incident_ID">
+                <Annotation Term="Common.ValueList">
+                    <Record Type="Common.ValueListType">
+                        <PropertyValue Property="CollectionPath" String="Incidents"/>
+                        <PropertyValue Property="Parameters">
+                            <Collection>
+                                <Record Type="Common.ValueListParameterInOut">
+                                    <PropertyValue Property="LocalDataProperty" PropertyPath="incident_ID"/>
+                                    <PropertyValue Property="ValueListProperty" String="ID"/>
+                                </Record>
+                                <Record Type="Common.ValueListParameterDisplayOnly">
+                                    <PropertyValue Property="ValueListProperty" String="ID"/>
+                                </Record>
+                                <Record Type="Common.ValueListParameterDisplayOnly">
+                                    <PropertyValue Property="ValueListProperty" String="title"/>
+                                </Record>
+                                <Record Type="Common.ValueListParameterDisplayOnly">
+                                    <PropertyValue Property="ValueListProperty" String="urgency"/>
+                                </Record>
+                                <Record Type="Common.ValueListParameterDisplayOnly">
+                                    <PropertyValue Property="ValueListProperty" String="status"/>
+                                </Record>
+                            </Collection>
+                        </PropertyValue>
+                    </Record>
+                </Annotation>
+                <Annotation Term="Common.Text" Path="incident/ID">
+                    <Annotation Term="UI.TextArrangement" EnumMember="UI.TextArrangementType/TextOnly"/>
+                </Annotation>
+                <Annotation Term="Common.Label" String="Incident"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations/IsActiveEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations/HasActiveEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations/HasDraftEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Conversations/DraftAdministrativeData">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView">
+                <Annotation Term="UI.PresentationVariant">
+                    <Record Type="UI.PresentationVariantType">
+                        <PropertyValue Property="Visualizations">
+                            <Collection>
+                                <AnnotationPath>@UI.LineItem</AnnotationPath>
+                            </Collection>
+                        </PropertyValue>
+                        <PropertyValue Property="RequestAtLeast">
+                            <Collection>
+                                <PropertyPath>parentKey</PropertyPath>
+                                <PropertyPath>serviceEntity</PropertyPath>
+                                <PropertyPath>serviceEntityPath</PropertyPath>
+                            </Collection>
+                        </PropertyValue>
+                        <PropertyValue Property="SortOrder">
+                            <Collection>
+                                <Record Type="Common.SortOrderType">
+                                    <PropertyValue Property="Property" PropertyPath="createdAt"/>
+                                    <PropertyValue Property="Descending" Bool="true"/>
+                                </Record>
+                            </Collection>
+                        </PropertyValue>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.LineItem">
+                    <Collection>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="modification"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="9%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="createdAt"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="12%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="createdBy"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="9%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="entity"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="11%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="objectID"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="14%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="attribute"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="9%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="valueChangedTo"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="11%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="valueChangedFrom"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="11%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="parentObjectID"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="14%"/>
+                                </Record>
+                            </Annotation>
+                            <Annotation Term="UI.Hidden" Bool="true"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.DeleteHidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.EntityContainer/ChangeView">
+                <Annotation Term="UI.PresentationVariant">
+                    <Record Type="UI.PresentationVariantType">
+                        <PropertyValue Property="Visualizations">
+                            <Collection>
+                                <AnnotationPath>@UI.LineItem</AnnotationPath>
+                            </Collection>
+                        </PropertyValue>
+                        <PropertyValue Property="RequestAtLeast">
+                            <Collection>
+                                <PropertyPath>parentKey</PropertyPath>
+                                <PropertyPath>serviceEntity</PropertyPath>
+                                <PropertyPath>serviceEntityPath</PropertyPath>
+                            </Collection>
+                        </PropertyValue>
+                        <PropertyValue Property="SortOrder">
+                            <Collection>
+                                <Record Type="Common.SortOrderType">
+                                    <PropertyValue Property="Property" PropertyPath="createdAt"/>
+                                    <PropertyValue Property="Descending" Bool="true"/>
+                                </Record>
+                            </Collection>
+                        </PropertyValue>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.DeleteHidden" Bool="true"/>
+                <Annotation Term="Capabilities.DeleteRestrictions">
+                    <Record Type="Capabilities.DeleteRestrictionsType">
+                        <PropertyValue Property="Deletable" Bool="false"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="Capabilities.InsertRestrictions">
+                    <Record Type="Capabilities.InsertRestrictionsType">
+                        <PropertyValue Property="Insertable" Bool="false"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="Capabilities.UpdateRestrictions">
+                    <Record Type="Capabilities.UpdateRestrictionsType">
+                        <PropertyValue Property="Updatable" Bool="false"/>
+                    </Record>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/ID">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+                <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/keys">
+                <Annotation Term="Common.Label" String="Changes Keys"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/attribute">
+                <Annotation Term="Common.Label" String="Field"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/valueChangedFrom">
+                <Annotation Term="Common.Label" String="Old Value"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/valueChangedTo">
+                <Annotation Term="Common.Label" String="New Value"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/entity">
+                <Annotation Term="Common.Label" String="Object Type"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/serviceEntity">
+                <Annotation Term="Common.Label" String="Service Object Type"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/parentKey">
+                <Annotation Term="Common.Label" String="Parent Key"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/serviceEntityPath">
+                <Annotation Term="Common.Label" String="Service Entity Path"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/modification">
+                <Annotation Term="Common.Label" String="Change Type"/>
+                <Annotation Term="Validation.AllowedValues">
+                    <Collection>
+                        <Record Type="Validation.AllowedValue">
+                            <Annotation Term="Core.SymbolicName" String="create"/>
+                            <PropertyValue Property="Value" String="Create"/>
+                        </Record>
+                        <Record Type="Validation.AllowedValue">
+                            <Annotation Term="Core.SymbolicName" String="update"/>
+                            <PropertyValue Property="Value" String="Edit"/>
+                        </Record>
+                        <Record Type="Validation.AllowedValue">
+                            <Annotation Term="Core.SymbolicName" String="delete"/>
+                            <PropertyValue Property="Value" String="Delete"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/valueDataType">
+                <Annotation Term="Common.Label" String="Value Data Type"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/changeLog_ID">
+                <Annotation Term="Common.Label" String="ChangeLog.ID"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/objectID">
+                <Annotation Term="Common.Label" String="Object ID"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/parentObjectID">
+                <Annotation Term="Common.Label" String="Parent Object ID"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/entityKey">
+                <Annotation Term="Common.Label" String="Entity Key"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/createdAt">
+                <Annotation Term="UI.HiddenFilter" Bool="true"/>
+                <Annotation Term="UI.ExcludeFromNavigationContext" Bool="true"/>
+                <Annotation Term="Core.Immutable" Bool="true"/>
+                <Annotation Term="Core.Computed" Bool="true"/>
+                <Annotation Term="Common.Label" String="Created On"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.ChangeView/createdBy">
+                <Annotation Term="UI.HiddenFilter" Bool="true"/>
+                <Annotation Term="UI.ExcludeFromNavigationContext" Bool="true"/>
+                <Annotation Term="Core.Immutable" Bool="true"/>
+                <Annotation Term="Core.Computed" Bool="true"/>
+                <Annotation Term="Core.Description" String="User's unique ID"/>
+                <Annotation Term="Common.Label" String="Created By"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.DraftAdministrativeData">
+                <Annotation Term="Common.Label" String="Draft Administrative Data"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.DraftAdministrativeData/DraftUUID">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+                <Annotation Term="Common.Label" String="Draft (Technical ID)"/>
+                <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.DraftAdministrativeData/CreationDateTime">
+                <Annotation Term="Common.Label" String="Draft Created On"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.DraftAdministrativeData/CreatedByUser">
+                <Annotation Term="Common.Label" String="Draft Created By"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.DraftAdministrativeData/DraftIsCreatedByMe">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+                <Annotation Term="Common.Label" String="Draft Created By Me"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.DraftAdministrativeData/LastChangeDateTime">
+                <Annotation Term="Common.Label" String="Draft Last Changed On"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.DraftAdministrativeData/LastChangedByUser">
+                <Annotation Term="Common.Label" String="Draft Last Changed By"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.DraftAdministrativeData/InProcessByUser">
+                <Annotation Term="Common.Label" String="Draft In Process By"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.DraftAdministrativeData/DraftIsProcessedByMe">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+                <Annotation Term="Common.Label" String="Draft In Process By Me"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments">
+                <Annotation Term="UI.HeaderInfo">
+                    <Record Type="UI.HeaderInfoType">
+                        <PropertyValue Property="TypeName" String="Attachment"/>
+                        <PropertyValue Property="TypeNamePlural" String="Attachments"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="UI.LineItem">
+                    <Collection>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="content"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="30%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="status"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="10%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="createdAt"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="20%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="createdBy"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="15%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                        <Record Type="UI.DataField">
+                            <PropertyValue Property="Value" Path="note"/>
+                            <Annotation Term="HTML5.CssDefaults">
+                                <Record Type="HTML5.CssDefaultsType">
+                                    <PropertyValue Property="width" String="25%"/>
+                                </Record>
+                            </Annotation>
+                        </Record>
+                    </Collection>
+                </Annotation>
+                <Annotation Term="UI.MediaResource">
+                    <Record Type="UI.MediaResourceType">
+                        <PropertyValue Property="Stream" Path="content"/>
+                    </Record>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.EntityContainer/Incidents_attachments">
+                <Annotation Term="Common.DraftNode">
+                    <Record Type="Common.DraftNodeType">
+                        <PropertyValue Property="PreparationAction" String="jwincidentapp02Srv.draftPrepare"/>
+                    </Record>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/createdAt">
+                <Annotation Term="UI.HiddenFilter" Bool="true"/>
+                <Annotation Term="UI.ExcludeFromNavigationContext" Bool="true"/>
+                <Annotation Term="Core.Immutable" Bool="true"/>
+                <Annotation Term="Core.Computed" Bool="true"/>
+                <Annotation Term="Common.Label" String="Created On"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/createdBy">
+                <Annotation Term="UI.HiddenFilter" Bool="true"/>
+                <Annotation Term="UI.ExcludeFromNavigationContext" Bool="true"/>
+                <Annotation Term="Core.Immutable" Bool="true"/>
+                <Annotation Term="Core.Computed" Bool="true"/>
+                <Annotation Term="Core.Description" String="User's unique ID"/>
+                <Annotation Term="Common.Label" String="Created By"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/modifiedAt">
+                <Annotation Term="UI.HiddenFilter" Bool="true"/>
+                <Annotation Term="UI.ExcludeFromNavigationContext" Bool="true"/>
+                <Annotation Term="Core.Computed" Bool="true"/>
+                <Annotation Term="Common.Label" String="Changed On"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/modifiedBy">
+                <Annotation Term="UI.HiddenFilter" Bool="true"/>
+                <Annotation Term="UI.ExcludeFromNavigationContext" Bool="true"/>
+                <Annotation Term="Core.Computed" Bool="true"/>
+                <Annotation Term="Core.Description" String="User's unique ID"/>
+                <Annotation Term="Common.Label" String="Changed By"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/ID">
+                <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/content">
+                <Annotation Term="Core.ContentDisposition">
+                    <Record Type="Core.ContentDispositionType">
+                        <PropertyValue Property="Filename" Path="filename"/>
+                        <PropertyValue Property="Type" String="inline"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="Core.Immutable" Bool="true"/>
+                <Annotation Term="Core.MediaType" Path="mimeType"/>
+                <Annotation Term="Common.Label" String="Attachment"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/mimeType">
+                <Annotation Term="Core.IsMediaType" Bool="true"/>
+                <Annotation Term="Common.Label" String="Media Type"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/filename">
+                <Annotation Term="Common.Label" String="Filename"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/status">
+                <Annotation Term="Common.Label" String="Scan Status"/>
+                <Annotation Term="Core.Computed" Bool="true"/>
+                <Annotation Term="Validation.AllowedValues">
+                    <Collection>
+                        <Record Type="Validation.AllowedValue">
+                            <Annotation Term="Core.SymbolicName" String="Unscanned"/>
+                            <PropertyValue Property="Value" String="Unscanned"/>
+                        </Record>
+                        <Record Type="Validation.AllowedValue">
+                            <Annotation Term="Core.SymbolicName" String="Scanning"/>
+                            <PropertyValue Property="Value" String="Scanning"/>
+                        </Record>
+                        <Record Type="Validation.AllowedValue">
+                            <Annotation Term="Core.SymbolicName" String="Infected"/>
+                            <PropertyValue Property="Value" String="Infected"/>
+                        </Record>
+                        <Record Type="Validation.AllowedValue">
+                            <Annotation Term="Core.SymbolicName" String="Clean"/>
+                            <PropertyValue Property="Value" String="Clean"/>
+                        </Record>
+                        <Record Type="Validation.AllowedValue">
+                            <Annotation Term="Core.SymbolicName" String="Failed"/>
+                            <PropertyValue Property="Value" String="Failed"/>
+                        </Record>
+                    </Collection>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/note">
+                <Annotation Term="Common.Label" String="Note"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/IsActiveEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/HasActiveEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/HasDraftEntity">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+            <Annotations Target="jwincidentapp02Srv.Incidents_attachments/DraftAdministrativeData">
+                <Annotation Term="UI.Hidden" Bool="true"/>
+            </Annotations>
+        </Schema>
+    </edmx:DataServices>
+</edmx:Edmx>

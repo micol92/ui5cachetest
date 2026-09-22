@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Crash Test</title>
+<script>
+  // 이 페이지(crashtest.html)는 xs-app.json에서 index.html과 동일하게
+  // 항상 최신으로 받도록 설정됨 (welcome file 처리와 동일 패턴)
+  window.CRASH_CTX = { empNo: 'E12345', name: '홍길동' };
+</script>
+</head>
+<body style="font-family: -apple-system, sans-serif; padding: 24px;">
+<h2>캐싱 버그 재현 테스트 페이지</h2>
+<div id="content" style="min-height:120px; border:1px solid #ddd; padding:16px; border-radius:6px;">로딩 중...</div>
+<script>
+  // <script src> 태그는 Cache-Control 재검증을 안 타는 경우가 있어
+  // fetch()로 명시적으로 받아서 eval — xs-app.json의 cacheControl이
+  // 그대로 적용되는지 정확히 테스트하기 위함
+  fetch('./crashtest.js').then(function (r) { return r.text(); }).then(function (code) { (0, eval)(code); });
+</script>
+</body>
+</html>
